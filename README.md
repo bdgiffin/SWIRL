@@ -1,2 +1,3 @@
-# SWIRL
-Structural Wind-borne debris Impact Risk Library
+# SWIRL - *S*tructural *W*ind-borne debris *I*mpact *R*isk assessment *L*ibrary.
+
+**SWIRL** is a *S*tructural *W*ind-borne debris *I*mpact *R*isk assessment *L*ibrary.
