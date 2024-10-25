@@ -10,7 +10,7 @@
 #include <vector>
 #include <set>
 #include <limits>
-#include <math.h>
+#include <cmath>
 #include <stdio.h>
 #include <iostream>
 

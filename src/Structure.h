@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <vector>
 #include <set>
-#include <math.h>
+#include <cmath>
 
 
 // ======================================================================== //

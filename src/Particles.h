@@ -4,7 +4,7 @@
 #include "WindField.h"
 #include "Logger.h"
 #include <vector>
-#include <math.h>
+#include <cmath>
 
 
 // ======================================================================== //

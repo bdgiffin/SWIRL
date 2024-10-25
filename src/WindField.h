@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <limits>
-#include <math.h>
+#include <cmath>
 
 
 // ======================================================================== //
