@@ -29,7 +29,7 @@ endif()
 
 # Tune BLT to our needs
 if (NOT BLT_CXX_STD)
-    set(BLT_CXX_STD "c++11" CACHE STRING "")
+    set(BLT_CXX_STD "c++14" CACHE STRING "")
 endif()
 
 set(ENABLE_ALL_WARNINGS ON CACHE BOOL "")
