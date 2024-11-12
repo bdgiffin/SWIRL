@@ -15,6 +15,8 @@ SWIRL - *S*\tructural *W*\ind-borne debris *I*\mpact *R*\isk assessment *L*\ibra
 
 **SWIRL** is a **S**\tructural **W**\ind-borne debris **I**\mpact **R**\isk assessment **L**\ibrary developed and intended for research purposes. SWIRL was designed to be coupled with the open source structural analysis software `OpenSEES <https://opensees.berkeley.edu>`_.
 
+SWIRL is written in C++ and Python, with corresponding language-specific APIs.
+
 .. note::
 
    The documentation for SWIRL is under active development. Please check back periodically for updates.
