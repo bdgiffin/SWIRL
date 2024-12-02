@@ -1,0 +1,13 @@
+abstract: <p>Pre-release version of the SWIRL library.</p>
+authors:
+- affiliation: Oklahoma State University
+  family-names: Brian Doran Giffin
+cff-version: 1.2.0
+date-released: '2024-12-02'
+doi: 10.5281/zenodo.14261045
+license:
+- cc-by-4.0
+repository-code: https://github.com/bdgiffin/SWIRL/tree/v0.1-alpha
+title: 'bdgiffin/SWIRL: SWIRL v0.1-alpha'
+type: software
+version: v0.1-alpha
