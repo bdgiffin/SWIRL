@@ -2,7 +2,11 @@
 # NOTE: THE LOCALLY MODIFIED VERSION OF OPENSEES WITH THE LINELOAD ELEMENT MUST BE USED
 from openseespy.opensees import *
 
-# Module for SWIRL
+# Append the location of the locally installed SWIRL package to sys.path
+import sys
+sys.path.append("../install/package/")
+
+# Load the SWIRL package
 import SWIRL
 
 # Python package for reading/writing data in the Exodus mesh database format
@@ -11,7 +15,6 @@ import SWIRL
 import pyexodus
 
 # Other needed Python packages
-import sys
 import os
 import math
 import time as timer

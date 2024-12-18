@@ -1,3 +1,28 @@
+# Installation
+
+To build the local Python package for SWIRL, you will first need to clone this repository and build the underlying C++ shared object library files from source. If you are cloning a new repository, you will need to obtain all required submodules via:
+```
+git submodule update --init --recursive
+```
+SWIRL utilizes a CMake-based build framework in combination with the funtionality provided by [BLT](https://llnl-blt.readthedocs.io/en/develop/).
+
+To configure, build, and local install SWIRL:
+```
+mkdir build
+cd build
+cmake ..
+make install
+```
+This will create a new local `install` subdirectory within the root SWIRL project directory, containing all packaged Python modules and compiled C++ shared object libraries required to import and run the Python-based examples.
+
+To import the locally installed SWIRL package within your Python project:
+```
+import sys
+sys.path.append("PATH/TO/SWIRL/install/package/")
+import SWIRL
+```
+The `examples` subdirectory provides further illustrative cases of invocations of the library within the context of a Python workflow, potentially interfacing with OpenSees.
+
 ## Changing OpenSeesPy to use a locally modified version of OpenSees
 
 The [OpenSees documentation](https://opensees.github.io/OpenSeesDocumentation/developer/build.html) provides instructions on how to modify the local version of OpenSeesPy that gets used when running Python scripts that import the `openseespy` module. The basic steps are described below:

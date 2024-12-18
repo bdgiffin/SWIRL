@@ -21,7 +21,7 @@ from argparse import ArgumentParser
 # Module initialization:
 
 # Load the pre-compiled external C/C++ "shared object" libraries
-library_name = "./libSWIRL.so"
+library_name = os.path.join(os.path.dirname(__file__), 'libSWIRL.so')
 API = CDLL(library_name)
 
 # Define types to convert Numpy arrays into C arrays:

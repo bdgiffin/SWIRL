@@ -67,6 +67,14 @@ add_subdirectory(tests)
 
 install(TARGETS SWIRL
 	LIBRARY DESTINATION lib)
+install(TARGETS SWIRL
+	LIBRARY DESTINATION package)
+install(FILES ${SWIRL_python}
+	DESTINATION package)
+install(FILES ${SWIRL_headers}
+	DESTINATION include)
+message(STATUS "SWIRL_python: " ${SWIRL_python})
+message(STATUS "SWIRL_headers: " ${SWIRL_headers})
 
 # Sets the installation prefix (where to install files)
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/install)

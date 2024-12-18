@@ -2,6 +2,12 @@ set(SWIRL_dependencies
     PARENT_SCOPE
     )
 
+set(SWIRL_python
+    ${CMAKE_CURRENT_LIST_DIR}/__init__.py
+    ${CMAKE_CURRENT_LIST_DIR}/SWIRL.py
+    PARENT_SCOPE
+    )
+
 set(SWIRL_sources
     ${CMAKE_CURRENT_LIST_DIR}/SWIRL_API.cpp
     )
@@ -24,3 +30,4 @@ blt_add_library(
     DEPENDS_ON  ${SWIRL_dependencies}
     SHARED      TRUE
     )
+set_target_properties(SWIRL PROPERTIES SUFFIX ".so")

@@ -46,7 +46,10 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#lineloadtest">LineLoadTest</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="resources.html">Resources</a></li>
 </ul>
 
@@ -80,6 +83,243 @@
 <p class="admonition-title">Note</p>
 <p>This page is currently under construction. Please check back later…</p>
 </div>
+<section id="lineloadtest">
+<h2>LineLoadTest<a class="headerlink" href="#lineloadtest" title="Link to this heading"></a></h2>
+<p>The <a class="reference download internal" download="" href="_downloads/0debe950d949e017097499b9d1547f63/LineLoadTest.py"><code class="xref download docutils literal notranslate"><span class="pre">LineLoadTest.py</span></code></a> test demonstrates how SWIRL may be used in combination with OpenSeesPy to run a coupled wind-structure-debris interaction problem using the <cite>LineLoad</cite> element in OpenSees. Accompanying files may be found in the <a class="reference external" href="https://github.com/bdgiffin/SWIRL/tree/main/examples">SWIRL examples</a> GitHub subdirectory. The source code is shown below:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Module for OpenSees</span>
+<span class="c1"># NOTE: THE LOCALLY MODIFIED VERSION OF OPENSEES WITH THE LINELOAD ELEMENT MUST BE USED</span>
+<span class="kn">from</span> <span class="nn">openseespy.opensees</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c1"># Append the location of the locally installed SWIRL package to sys.path</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;../install/package/&quot;</span><span class="p">)</span>
+
+<span class="c1"># Load the SWIRL package</span>
+<span class="kn">import</span> <span class="nn">SWIRL</span>
+
+<span class="c1"># Python package for reading/writing data in the Exodus mesh database format</span>
+<span class="c1"># NOTE: PYEXODUS V0.1.5 NEEDS TO BE MODIFIED TO WORK CORRECTLY WITH PYTHON 3.12</span>
+<span class="c1"># https://pypi.org/project/pyexodus/</span>
+<span class="kn">import</span> <span class="nn">pyexodus</span>
+
+<span class="c1"># Other needed Python packages</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">time</span> <span class="k">as</span> <span class="nn">timer</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">timedelta</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
+
+<span class="c1"># ---------------------------------------------------------------------------- #</span>
+
+<span class="c1"># read any input arguments the user may have provided</span>
+<span class="n">parser</span> <span class="o">=</span> <span class="n">ArgumentParser</span><span class="p">()</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-f&quot;</span><span class="p">,</span> <span class="s2">&quot;--file&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;filename&quot;</span><span class="p">,</span>
+                    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;input Exodus model file for the frame structure&quot;</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s2">&quot;FILE&quot;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-q&quot;</span><span class="p">,</span> <span class="s2">&quot;--quiet&quot;</span><span class="p">,</span>
+                    <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_false&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;verbose&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;don&#39;t print status messages to stdout&quot;</span><span class="p">)</span>
+<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+<span class="c1"># ---------------------------------------------------------------------------- #</span>
+
+<span class="c1"># check to make sure that the user has specified an Exodus file to define the geometry of the structure</span>
+<span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: a valid Exodus model file must be specified to define the frame structure&#39;s geometry.&quot;</span><span class="p">)</span>
+    <span class="n">quit</span><span class="p">()</span>
+
+<span class="c1"># read data from the Exodus model file for the frame structure</span>
+<span class="n">exoin</span> <span class="o">=</span> <span class="n">pyexodus</span><span class="o">.</span><span class="n">exodus</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">array_type</span><span class="o">=</span><span class="s1">&#39;numpy&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">numDims</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">numNodes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">numElems</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">numBlocks</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">numNodeSets</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">numSideSets</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">io_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">x_in</span><span class="p">,</span><span class="n">y_in</span><span class="p">,</span><span class="n">z_in</span> <span class="o">=</span> <span class="n">exoin</span><span class="o">.</span><span class="n">get_coords</span><span class="p">()</span> <span class="c1"># [m] (assumed units/dimensions of structure expressed in meters)</span>
+<span class="n">n_joints</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_in</span><span class="p">)</span>
+<span class="n">connect_in</span><span class="p">,</span><span class="n">n_members</span><span class="p">,</span><span class="n">n_nodes_per_member</span> <span class="o">=</span> <span class="n">exoin</span><span class="o">.</span><span class="n">get_elem_connectivity</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exoin</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="c1"># do some model pre-processing: identify the joints with supports</span>
+<span class="n">supports</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">n_joints</span><span class="p">):</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">z_in</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">1.0e-6</span><span class="p">):</span>
+        <span class="n">supports</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+<span class="c1"># define the cross-sectional area, effective member radius, and mass density assigned to all members</span>
+<span class="n">modulus_of_elasticity</span> <span class="o">=</span> <span class="mf">200.0e+9</span> <span class="c1"># [kg*m/s^2] modulus of elasticity of steel (200 GPa)</span>
+<span class="n">poissons_ratio</span>        <span class="o">=</span> <span class="mf">0.3</span>      <span class="c1"># dimensionless</span>
+<span class="n">steel_mass_density</span>    <span class="o">=</span> <span class="mf">7850.0</span>   <span class="c1"># [kg/m^3] (mass density of steel)</span>
+<span class="n">cross_sectional_area</span>  <span class="o">=</span> <span class="mf">0.00065</span>  <span class="c1"># (cross-sectional area 1in^2 = 0.00065m^2)</span>
+<span class="n">radius_of_gyration</span>    <span class="o">=</span> <span class="mf">0.05</span>     <span class="c1"># (effective radius 2in = 0.05m)</span>
+
+<span class="n">shear_modulus</span>        <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">modulus_of_elasticity</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">+</span><span class="n">poissons_ratio</span><span class="p">)</span>
+<span class="n">mass_per_unit_length</span> <span class="o">=</span> <span class="n">steel_mass_density</span><span class="o">*</span><span class="n">cross_sectional_area</span>
+<span class="n">polar_moment_of_area</span> <span class="o">=</span> <span class="n">cross_sectional_area</span><span class="o">*</span><span class="n">radius_of_gyration</span><span class="o">*</span><span class="n">radius_of_gyration</span>
+<span class="n">moment_of_area_x</span>     <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">polar_moment_of_area</span>
+<span class="n">moment_of_area_y</span>     <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">polar_moment_of_area</span>
+        
+<span class="c1"># lump the nodal masses to the joints of the structure</span>
+<span class="c1">#lumped_mass = np.zeros(n_joints)</span>
+<span class="c1">#for i in range(0,n_members):</span>
+<span class="c1">#    i1 = connect_in[i][0]-1</span>
+<span class="c1">#    i2 = connect_in[i][1]-1</span>
+<span class="c1">#    dx = x_in[i2] - x_in[i1]</span>
+<span class="c1">#    dy = y_in[i2] - y_in[i1]</span>
+<span class="c1">#    dz = z_in[i2] - z_in[i1]</span>
+<span class="c1">#    member_length = math.sqrt(dx*dx + dy*dy + dz*dz)</span>
+<span class="c1">#    member_mass   = steel_mass_density*cross_sectional_area*member_length</span>
+<span class="c1">#    lumped_mass[i1] = lumped_mass[i1] + 0.5*member_mass</span>
+<span class="c1">#    lumped_mass[i2] = lumped_mass[i2] + 0.5*member_mass</span>
+
+<span class="c1"># ---------------------------------------------------------------------------- #</span>
+
+<span class="c1"># Call C/C++ library API functions from Python:</span>
+
+<span class="c1"># Define randomized spherical particle parameters</span>
+<span class="n">n_particles</span> <span class="o">=</span> <span class="mi">2000</span>
+<span class="n">particle_density</span>         <span class="o">=</span>  <span class="mf">0.5</span> <span class="c1"># [kg/m^3] (roughly the density of wood)</span>
+<span class="n">particle_min_diameter</span>    <span class="o">=</span> <span class="mf">0.01</span> <span class="c1"># [m]</span>
+<span class="n">particle_diameter_range</span>  <span class="o">=</span>  <span class="mf">1.0</span> <span class="c1"># [m]</span>
+<span class="n">particle_cylinder_radius</span> <span class="o">=</span> <span class="mf">20.0</span> <span class="c1"># [m]</span>
+<span class="n">particle_cylinder_height</span> <span class="o">=</span> <span class="mf">40.0</span> <span class="c1"># [m]</span>
+<span class="n">particle_cylinder_center</span> <span class="o">=</span> <span class="p">[</span><span class="mf">10.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">]</span> <span class="c1"># [m,m,m]</span>
+<span class="n">random_seed</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">SWIRL</span><span class="o">.</span><span class="n">create_random_particles</span><span class="p">(</span><span class="n">n_particles</span><span class="p">,</span><span class="n">particle_density</span><span class="p">,</span><span class="n">particle_min_diameter</span><span class="p">,</span><span class="n">particle_diameter_range</span><span class="p">,</span><span class="n">particle_cylinder_radius</span><span class="p">,</span><span class="n">particle_cylinder_height</span><span class="p">,</span><span class="n">particle_cylinder_center</span><span class="p">,</span><span class="n">random_seed</span><span class="p">)</span>
+
+<span class="c1"># Create the parameterized wind field model (Baker Sterling Vortex)</span>
+<span class="n">wind_field_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">100.0</span> <span class="c1"># [m/s]      Um: reference radial velocity</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">1.0</span>   <span class="c1"># [m]        rm: reference radius</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">4.0</span>   <span class="c1"># [m]        zm: reference height</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">2.0</span>   <span class="c1">#             S: swirl ratio (ratio of max circumferential velocity to radial velocity at reference height)</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">2.0</span>   <span class="c1">#         gamma: </span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">1.293</span> <span class="c1"># [kg/m^3] rho0: reference density of air at STP</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">10.0</span>  <span class="c1"># [m]       xc0: x-position of the vortex center</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">0.0</span>   <span class="c1"># [m]       yc0: y-position of the vortex center</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">0.0</span>   <span class="c1"># [m]       zc0: z-position of the vortex center</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">0.0</span>   <span class="c1"># [m/s]     vxc: x-velocity of the vortex center</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>   <span class="c1"># [m/s]     vyc: y-velocity of the vortex center</span>
+<span class="n">wind_field_params</span><span class="p">[</span><span class="mi">11</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>   <span class="c1"># [m/s]     vzc: z-velocity of the vortex center</span>
+<span class="n">SWIRL</span><span class="o">.</span><span class="n">API</span><span class="o">.</span><span class="n">define_wind_field</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;BakerSterlingVortex&quot;</span><span class="p">,</span><span class="n">wind_field_params</span><span class="p">)</span>
+
+<span class="c1"># Create a Rankine vortex</span>
+<span class="c1">#wind_field_params = np.zeros(12)</span>
+<span class="c1">#wind_field_params[0]  = 100.0 # [m/s]      Um: reference tangential velocity</span>
+<span class="c1">#wind_field_params[1]  = 10.0  # [m]        rm: reference outer radius</span>
+<span class="c1">#wind_field_params[2]  = 1.0   # [m]        rc: reference core radius</span>
+<span class="c1">#wind_field_params[3]  = 1.0   #             E: decay index</span>
+<span class="c1">#wind_field_params[4]  = 0.0   #       (unused) </span>
+<span class="c1">#wind_field_params[5]  = 1.293 # [kg/m^3] rho0: reference density of air at STP</span>
+<span class="c1">#wind_field_params[6]  = 10.0  # [m]       xc0: x-position of the vortex center</span>
+<span class="c1">#wind_field_params[7]  = 0.0   # [m]       yc0: y-position of the vortex center</span>
+<span class="c1">#wind_field_params[8]  = 0.0   # [m]       zc0: z-position of the vortex center</span>
+<span class="c1">#wind_field_params[9]  = 0.0   # [m/s]     vxc: x-velocity of the vortex center</span>
+<span class="c1">#wind_field_params[10] = 0.0   # [m/s]     vyc: y-velocity of the vortex center</span>
+<span class="c1">#wind_field_params[11] = 0.0   # [m/s]     vzc: z-velocity of the vortex center</span>
+<span class="c1">#SWIRL.API.define_wind_field(b&quot;RankineVortex&quot;,wind_field_params)</span>
+
+<span class="c1"># ----------------------------------</span>
+<span class="c1"># Start of OpenSees model generation</span>
+<span class="c1"># ----------------------------------</span>
+
+<span class="c1"># --------------------------------------------------------------------------------------------------</span>
+<span class="c1"># Example 3D linear dynamic truss structure subjected to time-varying vortex wind and debris loading</span>
+<span class="c1"># all units are in Newtons, meters, seconds</span>
+<span class="c1">#</span>
+
+<span class="c1"># SET UP ----------------------------------------------------------------------------</span>
+
+<span class="n">wipe</span><span class="p">()</span>				               <span class="c1"># clear opensees model</span>
+<span class="n">model</span><span class="p">(</span><span class="s1">&#39;basic&#39;</span><span class="p">,</span> <span class="s1">&#39;-ndm&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;-ndf&#39;</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>	       <span class="c1"># 3 dimensions, 6 dof per node (3 displacements + 3 rotations)</span>
+<span class="c1"># file mkdir data 			       # create data directory</span>
+
+<span class="c1"># define GEOMETRY -------------------------------------------------------------</span>
+
+<span class="c1"># nodal coordinates:</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">n_joints</span><span class="p">):</span>
+    <span class="n">node</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">x_in</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_in</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">z_in</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="c1"># [m] (node, X, Y, Z)</span>
+
+<span class="c1"># Single point constraints -- Boundary Conditions</span>
+<span class="k">for</span> <span class="n">isupport</span> <span class="ow">in</span> <span class="n">supports</span><span class="p">:</span>
+    <span class="n">fix</span><span class="p">(</span><span class="n">isupport</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="c1"># node DX DY DZ RX RY RZ</span>
+
+<span class="c1"># define MATERIAL -------------------------------------------------------------</span>
+
+<span class="c1"># nodal masses: (only needed if masses are not already computed by the element)</span>
+<span class="c1">#for i in range(0,n_joints):</span>
+<span class="c1">#    mass(i+1, lumped_mass[i], lumped_mass[i], lumped_mass[i]) # [kg] node#, Mx My Mz, Mass=Weight/g.</span>
+
+<span class="c1"># define materials</span>
+<span class="c1">#matTag = 1</span>
+<span class="c1">#uniaxialMaterial(&quot;Elastic&quot;, matTag, modulus_of_elasticity) # [kg*m/s^2] modulus of elasticity of steel (200 GPa)</span>
+
+<span class="c1"># Define SECTION -------------------------------------------------------------</span>
+
+<span class="c1"># define section</span>
+<span class="n">secTag</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">section</span><span class="p">(</span><span class="s1">&#39;Elastic&#39;</span><span class="p">,</span> <span class="n">secTag</span><span class="p">,</span> <span class="n">modulus_of_elasticity</span><span class="p">,</span> <span class="n">cross_sectional_area</span><span class="p">,</span> <span class="n">moment_of_area_x</span><span class="p">,</span> <span class="n">moment_of_area_y</span><span class="p">,</span> <span class="n">shear_modulus</span><span class="p">,</span> <span class="n">polar_moment_of_area</span><span class="p">)</span>
+
+<span class="c1"># define geometric transformation (linear, for now, but will eventually need to make this non-linear to capture buckling instabilities)</span>
+<span class="n">transfTag</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">geomTransf</span><span class="p">(</span><span class="s1">&#39;Linear&#39;</span><span class="p">,</span> <span class="n">transfTag</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+<span class="c1"># Define ELEMENTS -------------------------------------------------------------</span>
+
+<span class="c1"># NOTE: The structure should be represented in terms of nonlinear beam-column elements, rather than simple truss elements</span>
+
+<span class="c1"># define truss element connectivity</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">n_members</span><span class="p">):</span>
+    <span class="n">element</span><span class="p">(</span><span class="s1">&#39;elasticBeamColumn&#39;</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">connect_in</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">connect_in</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]),</span> <span class="n">secTag</span><span class="p">,</span> <span class="n">transfTag</span><span class="p">,</span> <span class="s1">&#39;-mass&#39;</span><span class="p">,</span> <span class="n">mass_per_unit_length</span><span class="p">,</span> <span class="s1">&#39;-cMass&#39;</span><span class="p">)</span>
+    <span class="c1">#element(&quot;Truss&quot;, i+1, int(connect_in[i][0]), int(connect_in[i][1]), cross_sectional_area, matTag) # [m^2] (Truss, TrussID, node1, node2, area, material)</span>
+
+<span class="c1"># define LineLoad elements</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">n_members</span><span class="p">):</span>
+    <span class="n">element</span><span class="p">(</span><span class="s2">&quot;LineLoad&quot;</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="o">+</span><span class="n">n_members</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">connect_in</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">connect_in</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]),</span> <span class="n">radius_of_gyration</span><span class="p">,</span> <span class="n">SWIRL</span><span class="o">.</span><span class="n">library_name</span><span class="p">)</span> <span class="c1"># [m] (LineLoad, LineLoadID, node1, node2, radius, library)</span>
+
+<span class="c1"># RECORDER -------------------------------------------------------------</span>
+
+<span class="c1"># output position-velocity-displacement (PVD) data</span>
+<span class="n">output_directory</span> <span class="o">=</span> <span class="s1">&#39;LineLoadTest_PVD&#39;</span>
+<span class="n">recorder</span><span class="p">(</span><span class="s1">&#39;PVD&#39;</span><span class="p">,</span> <span class="n">output_directory</span><span class="p">,</span> <span class="s1">&#39;disp&#39;</span><span class="p">,</span> <span class="s1">&#39;reaction&#39;</span> <span class="p">,</span><span class="s1">&#39;unbalancedLoad&#39;</span><span class="p">)</span>
+
+<span class="c1"># create a matching directory in which to dump the output data</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_directory</span><span class="p">):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_directory</span><span class="p">)</span>
+
+<span class="c1"># DYNAMIC analysis -------------------------------------------------------------</span>
+
+<span class="c1"># create TimeSeries</span>
+<span class="n">timeSeries</span><span class="p">(</span><span class="s2">&quot;Linear&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># create a plain load pattern</span>
+<span class="n">pattern</span><span class="p">(</span><span class="s2">&quot;Plain&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># set damping based on first eigen mode</span>
+<span class="c1">#freq = eigen(&#39;-fullGenLapack&#39;, 1)[0]**0.5</span>
+<span class="c1">#dampRatio = 0.02</span>
+<span class="c1">#rayleigh(0., 0., 0., 2*dampRatio/freq)</span>
+
+<span class="c1"># create the analysis</span>
+<span class="c1">#wipeAnalysis()			 # clear previously-define analysis parameters</span>
+<span class="n">constraints</span><span class="p">(</span><span class="s1">&#39;Plain&#39;</span><span class="p">)</span>    	 <span class="c1"># how it handles boundary conditions</span>
+<span class="n">numberer</span><span class="p">(</span><span class="s2">&quot;RCM&quot;</span><span class="p">)</span>                  <span class="c1"># renumber dof&#39;s to minimize band-width (optimization), if you want to</span>
+<span class="n">system</span><span class="p">(</span><span class="s1">&#39;BandGeneral&#39;</span><span class="p">)</span>            <span class="c1"># how to store and solve the system of equations in the analysis</span>
+<span class="n">algorithm</span><span class="p">(</span><span class="s1">&#39;Linear&#39;</span><span class="p">)</span>	         <span class="c1"># use Linear algorithm for linear analysis</span>
+<span class="n">integrator</span><span class="p">(</span><span class="s1">&#39;Newmark&#39;</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">)</span> <span class="c1"># determine the next time step for an analysis</span>
+<span class="n">analysis</span><span class="p">(</span><span class="s1">&#39;Transient&#39;</span><span class="p">)</span>            <span class="c1"># define type of analysis: time-dependent</span>
+
+<span class="c1"># RUN analysis -------------------------------------------------------------</span>
+
+<span class="c1"># perform the analysis</span>
+<span class="n">time</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="c1"># [s] starting time</span>
+<span class="n">dt</span>   <span class="o">=</span> <span class="mf">0.001</span> <span class="c1"># [s] time increment</span>
+<span class="n">SWIRL</span><span class="o">.</span><span class="n">output_state</span><span class="p">(</span><span class="n">time</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">step_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1000</span><span class="p">):</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">time</span> <span class="o">+</span> <span class="n">dt</span>
+    <span class="n">analyze</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">dt</span><span class="p">)</span> <span class="c1"># apply 1 time step of size dt in the opensees analysis</span>
+    <span class="n">SWIRL</span><span class="o">.</span><span class="n">output_state</span><span class="p">(</span><span class="n">time</span><span class="p">)</span>
+
+<span class="c1"># finalize the SWIRL module (close the Exodus files)</span>
+<span class="n">SWIRL</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
 </section>
 
 
