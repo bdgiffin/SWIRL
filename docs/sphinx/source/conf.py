@@ -14,7 +14,11 @@ release = '1.0'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = []
+# Further details on how to include a bibliography may be found here:
+#   https://chiplicity.readthedocs.io/en/latest/Using_Sphinx/UsingBibTeXCitationsInSphinx.html
+extensions = ['sphinxcontrib.bibtex']
+bibtex_bibfiles = ['_static/references.bib']
+bibtex_default_style = 'unsrt'
 
 templates_path = ['_templates']
 exclude_patterns = []

@@ -3,9 +3,10 @@
 Resources
 =========
 
-External resources may be found here to aid in developing a better understanding of wind-borne debris impact.
-
-
 .. note::
 
-   This page is currently under construction. Please check back later...
+   This page is currently under construction.
+
+The primary vortex wind field model included within SWIRL is that proposed by :footcite:t:`baker_2018`.
+   
+.. footbibliography::
