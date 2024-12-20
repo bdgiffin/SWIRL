@@ -6,7 +6,7 @@
 .. image:: _static/SWIRL_logo.png
    :width: 300
    
-SWIRL - *S*\tructural *W*\ind-borne debris *I*\mpact *R*\isk assessment *L*\ibrary
+*S*\tructural *W*\ind-borne debris *I*\mpact *R*\isk assessment *L*\ibrary (SWIRL)
 ==================================================================================
 
 **Author**: `Brian Doran Giffin <https://github.com/bdgiffin>`_ (`brian.giffin@okstate.edu <mailto:brian.giffin@okstate.edu>`_)
