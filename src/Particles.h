@@ -60,7 +60,20 @@ struct Particles {
       fz_out[i] = fz[i];
     } // for i=1,...,num_particles
     
-  } // define_particles()
+  } // get_field_data()
+
+  // ---------------------------------------------------------------------- //
+
+  // Method to retrieve the current positions for all compact particles at the current time
+  void get_positions(double *x_out, double *y_out, double *z_out) {
+
+    for (int i=0; i<num_particles; i++) {
+      x_out[i] = x[i];
+      y_out[i] = y[i];
+      z_out[i] = z[i];
+    } // for i=1,...,num_particles
+    
+  } // get_positions()
 
   // ---------------------------------------------------------------------- //
 

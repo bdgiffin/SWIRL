@@ -41,8 +41,12 @@ API.define_particles.argtypes = [c_size_t, ND_POINTER_1, ND_POINTER_1, ND_POINTE
 API.define_particles.restype  = None
 API.define_members.argtypes = [c_size_t, c_size_t, NI_POINTER_2, c_size_t, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
 API.define_members.restype  = None
+API.update_state.argtypes = [c_double]
+API.update_state.restype  = None
 API.get_particle_field_data.argtypes = [ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
 API.get_particle_field_data.restype  = None
+API.get_particle_positions.argtypes = [ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
+API.get_particle_positions.restype  = None
 API.get_wind_field_data.argtypes = [c_size_t, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
 API.get_wind_field_data.restype  = None
 

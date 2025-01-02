@@ -47,6 +47,14 @@ extern "C" {
   
   // ------------------------------------------------------------------------ //
 
+  // (Legacy) API method to update the simulation state to the indicated analysis time
+  // time: indicated analysis time to which the analysis should be updated
+  void update_state(double time) {
+    SWIRL_instance.update_state(time);
+  } // update_state()
+  
+  // ------------------------------------------------------------------------ //
+
   // Retrieve current particle field data at the current analysis time
   // {ux,uy,uz}: arrays of vector components of particle displacements at the current time
   // {vx,vy,vz}: arrays of vector components of particle velocities at the current time
@@ -58,6 +66,16 @@ extern "C" {
     if (!SWIRL_instance.initialized()) SWIRL_instance.initialize();
     SWIRL_instance.debris.get_field_data(ux,uy,uz,vx,vy,vz,fx,fy,fz);
   } // get_particle_field_data()
+  
+  // ------------------------------------------------------------------------ //
+
+  // Retrieve current particle positions at the current analysis time
+  // {x,y,z}: arrays of vector components of particle positions at the current time
+  void get_particle_positions(double *x, double *y, double *z) {
+    // conditionally initialize the simulation state
+    if (!SWIRL_instance.initialized()) SWIRL_instance.initialize();
+    SWIRL_instance.debris.get_positions(x,y,z);
+  } // get_particle_positions()
   
   // ------------------------------------------------------------------------ //
 

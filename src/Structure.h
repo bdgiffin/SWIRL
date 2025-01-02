@@ -91,65 +91,70 @@ struct Structure {
 
   // Initialize the Structure object (assuming all members have been defined)
   void initialize(void) {
-    DEBUG(std::cout << "Initializing Structure object with " << num_members << " members defined" << std::endl;)
     
-    // initialize stored data for all members
-    fx1.resize(num_members);
-    fy1.resize(num_members);
-    fz1.resize(num_members);
-    fx2.resize(num_members);
-    fy2.resize(num_members);
-    fz2.resize(num_members);
-    jx1.resize(num_members);
-    jy1.resize(num_members);
-    jz1.resize(num_members);
-    jx2.resize(num_members);
-    jy2.resize(num_members);
-    jz2.resize(num_members);
+    if (num_members > 0) {
+      
+      DEBUG(std::cout << "Initializing Structure object with " << num_members << " members defined" << std::endl;)
+    
+	// initialize stored data for all members
+	fx1.resize(num_members);
+      fy1.resize(num_members);
+      fz1.resize(num_members);
+      fx2.resize(num_members);
+      fy2.resize(num_members);
+      fz2.resize(num_members);
+      jx1.resize(num_members);
+      jy1.resize(num_members);
+      jz1.resize(num_members);
+      jx2.resize(num_members);
+      jy2.resize(num_members);
+      jz2.resize(num_members);
 
-    // create inverse mapping from element tags to member indices
-    tag_to_index.initialize(element_tag);
+      // create inverse mapping from element tags to member indices
+      tag_to_index.initialize(element_tag);
 
-    // .................................................................... //
+      // .................................................................... //
 
-    // get grid dimensions for spatial hashing
-    double xmin = std::min(*std::min_element(x1.begin(),x1.end()),
-			   *std::min_element(x2.begin(),x2.end()));
-    double ymin = std::min(*std::min_element(y1.begin(),y1.end()),
-			   *std::min_element(y2.begin(),y2.end()));
-    double zmin = std::min(*std::min_element(z1.begin(),z1.end()),
-			   *std::min_element(z2.begin(),z2.end()));
-    double xmax = std::max(*std::max_element(x1.begin(),x1.end()),
-			   *std::max_element(x2.begin(),x2.end()));
-    double ymax = std::max(*std::max_element(y1.begin(),y1.end()),
-			   *std::max_element(y2.begin(),y2.end()));
-    double zmax = std::max(*std::max_element(z1.begin(),z1.end()),
-			   *std::max_element(z2.begin(),z2.end()));
+      // get grid dimensions for spatial hashing
+      double xmin = std::min(*std::min_element(x1.begin(),x1.end()),
+			     *std::min_element(x2.begin(),x2.end()));
+      double ymin = std::min(*std::min_element(y1.begin(),y1.end()),
+			     *std::min_element(y2.begin(),y2.end()));
+      double zmin = std::min(*std::min_element(z1.begin(),z1.end()),
+			     *std::min_element(z2.begin(),z2.end()));
+      double xmax = std::max(*std::max_element(x1.begin(),x1.end()),
+			     *std::max_element(x2.begin(),x2.end()));
+      double ymax = std::max(*std::max_element(y1.begin(),y1.end()),
+			     *std::max_element(y2.begin(),y2.end()));
+      double zmax = std::max(*std::max_element(z1.begin(),z1.end()),
+			     *std::max_element(z2.begin(),z2.end()));
 
-    // set a fixed number of grid cells on all sides
-    int    Nxyz  = 100; // (this should be determined based upon the number of members and the size of the structure)
-    double dedge = ((xmax - xmin) + (ymax - ymin) + (zmax - zmin))/Nxyz;
+      // set a fixed number of grid cells on all sides
+      int    Nxyz  = 100; // (this should be determined based upon the number of members and the size of the structure)
+      double dedge = ((xmax - xmin) + (ymax - ymin) + (zmax - zmin))/Nxyz;
 
-    // expand the grid dimensions by one extra layer of grid cells in all directions
-    xmin -= dedge;
-    ymin -= dedge;
-    zmin -= dedge;
-    xmax += dedge;
-    ymax += dedge;
-    zmax += dedge;
+      // expand the grid dimensions by one extra layer of grid cells in all directions
+      xmin -= dedge;
+      ymin -= dedge;
+      zmin -= dedge;
+      xmax += dedge;
+      ymax += dedge;
+      zmax += dedge;
 
-    // determine the number of grid cells per side
-    int Nx = (xmax - xmin)/dedge;
-    int Ny = (ymax - ymin)/dedge;
-    int Nz = (zmax - zmin)/dedge;
+      // determine the number of grid cells per side
+      int Nx = (xmax - xmin)/dedge;
+      int Ny = (ymax - ymin)/dedge;
+      int Nz = (zmax - zmin)/dedge;
 
-    // create the spatial hash
-    members_hash.set_dimensions(xmin,ymin,zmin,xmax,ymax,zmax,Nx,Ny,Nz);
-    for (int i=0; i < num_members; i++) {
-      members_hash.insert_segment(i,x1[i],y1[i],z1[i],x2[i],y2[i],z2[i]);
-    } // for i=1,...,num_members
+      // create the spatial hash
+      members_hash.set_dimensions(xmin,ymin,zmin,xmax,ymax,zmax,Nx,Ny,Nz);
+      for (int i=0; i < num_members; i++) {
+	members_hash.insert_segment(i,x1[i],y1[i],z1[i],x2[i],y2[i],z2[i]);
+      } // for i=1,...,num_members
 
-    // .................................................................... //
+      // .................................................................... //
+
+    } // if (num_members > 0)
     
   } // initialize()
   
@@ -191,62 +196,66 @@ struct Structure {
   
   void apply_drag_forces(WindField* wind_model, double time) {
 
-    // declare persistent static data arrays
-    static std::vector<double> xmid(num_members);
-    static std::vector<double> ymid(num_members);
-    static std::vector<double> zmid(num_members);
-    static std::vector<double> vxf(num_members);
-    static std::vector<double> vyf(num_members);
-    static std::vector<double> vzf(num_members);
-    static std::vector<double> rhof(num_members);
+    if (num_members > 0) {
 
-    // loop over all members
-    for (int i=0; i < num_members; i++) {
+      // declare persistent static data arrays
+      static std::vector<double> xmid(num_members);
+      static std::vector<double> ymid(num_members);
+      static std::vector<double> zmid(num_members);
+      static std::vector<double> vxf(num_members);
+      static std::vector<double> vyf(num_members);
+      static std::vector<double> vzf(num_members);
+      static std::vector<double> rhof(num_members);
+
+      // loop over all members
+      for (int i=0; i < num_members; i++) {
       
-      // determine the mid-point position along the length of the current member
-      xmid[i] = 0.5*(x1[i]+x2[i]);
-      ymid[i] = 0.5*(y1[i]+y2[i]);
-      zmid[i] = 0.5*(z1[i]+z2[i]);
+	// determine the mid-point position along the length of the current member
+	xmid[i] = 0.5*(x1[i]+x2[i]);
+	ymid[i] = 0.5*(y1[i]+y2[i]);
+	zmid[i] = 0.5*(z1[i]+z2[i]);
     
-    } // for i=0,...,num_members
+      } // for i=0,...,num_members
     
-    // determine the fluid velocity and density at the current positions of all members
-    wind_model->get_fluid_velocity_and_density(num_members,time,xmid.data(),ymid.data(),zmid.data(),
-					       vxf.data(),vyf.data(),vzf.data(),rhof.data());
+      // determine the fluid velocity and density at the current positions of all members
+      wind_model->get_fluid_velocity_and_density(num_members,time,xmid.data(),ymid.data(),zmid.data(),
+						 vxf.data(),vyf.data(),vzf.data(),rhof.data());
 
-    // loop over all members
-    for (int i=0; i < num_members; i++) {
+      // loop over all members
+      for (int i=0; i < num_members; i++) {
 
-      // get the (relative) wind velocity at the current member's mid-point location (assuming the member is stationary)
-      double velocity[3] = { vxf[i], vyf[i], vzf[i] };
+	// get the (relative) wind velocity at the current member's mid-point location (assuming the member is stationary)
+	double velocity[3] = { vxf[i], vyf[i], vzf[i] };
 
-      // get the wind speed (the magnitude of the relative wind velocity vector) and the direction of the relative wind velocity
-      double wind_speed = std::max(std::sqrt(velocity[0]*velocity[0] + velocity[1]*velocity[1] + velocity[2]*velocity[2]),
-				   std::numeric_limits<double>::min());
-      double wind_direction[3] = { velocity[0]/wind_speed, velocity[1]/wind_speed, velocity[2]/wind_speed };
+	// get the wind speed (the magnitude of the relative wind velocity vector) and the direction of the relative wind velocity
+	double wind_speed = std::max(std::sqrt(velocity[0]*velocity[0] + velocity[1]*velocity[1] + velocity[2]*velocity[2]),
+				     std::numeric_limits<double>::min());
+	double wind_direction[3] = { velocity[0]/wind_speed, velocity[1]/wind_speed, velocity[2]/wind_speed };
     
-      // get the projected length of the element within the plane perpindicular to the wind direction
-      double lambda[3] = { (x2[i]-x1[i]), (y2[i]-y1[i]), (z2[i]-z1[i]) };
-      double height = lambda[0]*wind_direction[0] + lambda[1]*wind_direction[1] + lambda[2]*wind_direction[2];
-      lambda[0] -= height*wind_direction[0];
-      lambda[1] -= height*wind_direction[1];
-      lambda[2] -= height*wind_direction[2];
-      double proj_length = std::sqrt(lambda[0]*lambda[0] + lambda[1]*lambda[1] + lambda[2]*lambda[2]);
+	// get the projected length of the element within the plane perpindicular to the wind direction
+	double lambda[3] = { (x2[i]-x1[i]), (y2[i]-y1[i]), (z2[i]-z1[i]) };
+	double height = lambda[0]*wind_direction[0] + lambda[1]*wind_direction[1] + lambda[2]*wind_direction[2];
+	lambda[0] -= height*wind_direction[0];
+	lambda[1] -= height*wind_direction[1];
+	lambda[2] -= height*wind_direction[2];
+	double proj_length = std::sqrt(lambda[0]*lambda[0] + lambda[1]*lambda[1] + lambda[2]*lambda[2]);
 
-      // compute the total drag load, applied in the same direction as the relative wind velocity
-      double area = 2.0*radius[i]*proj_length;
-      double norm_force = 0.5*rhof[i]*drag_coeff[i]*area*wind_speed;
-      double drag_force[3] = { norm_force*wind_direction[0], norm_force*wind_direction[1], norm_force*wind_direction[2] };
+	// compute the total drag load, applied in the same direction as the relative wind velocity
+	double area = 2.0*radius[i]*proj_length;
+	double norm_force = 0.5*rhof[i]*drag_coeff[i]*area*wind_speed;
+	double drag_force[3] = { norm_force*wind_direction[0], norm_force*wind_direction[1], norm_force*wind_direction[2] };
 
-      // apply the drag force evenly between the two end-points of the member
-      fx1[i] += 0.5*drag_force[0]; // x-force at node 1
-      fy1[i] += 0.5*drag_force[1]; // y-force at node 1
-      fz1[i] += 0.5*drag_force[2]; // z-force at node 1
-      fx2[i] += 0.5*drag_force[0]; // x-force at node 2
-      fy2[i] += 0.5*drag_force[1]; // y-force at node 2
-      fz2[i] += 0.5*drag_force[2]; // z-force at node 2
+	// apply the drag force evenly between the two end-points of the member
+	fx1[i] += 0.5*drag_force[0]; // x-force at node 1
+	fy1[i] += 0.5*drag_force[1]; // y-force at node 1
+	fz1[i] += 0.5*drag_force[2]; // z-force at node 1
+	fx2[i] += 0.5*drag_force[0]; // x-force at node 2
+	fy2[i] += 0.5*drag_force[1]; // y-force at node 2
+	fz2[i] += 0.5*drag_force[2]; // z-force at node 2
     
-    } // for i=0,...,num_members
+      } // for i=0,...,num_members
+    
+    } // if (num_members > 0)
     
   } // apply_drag_forces()
   
@@ -257,32 +266,36 @@ struct Structure {
 				     double xp, double yp, double zp,
 				     double vxp, double vyp, double vzp,
 			             double& fxp, double& fyp, double& fzp) {
-    
-    // find the range of grid cells that overlap with the bounding box surrounding the current particle
-    int i1,j1,k1,i2,j2,k2;
-    if (members_hash.find_grid_cells_overlapping_bounding_box(xp-rp,yp-rp,zp-rp,
-							      xp+rp,yp+rp,zp+rp,
-							      i1,j1,k1,i2,j2,k2)) {
-      // loop over the full range of grid cells that overlap with the particle's bounding box
-      std::set<int> segment_ids;
-      for (int i=i1; i<=i2; i++) {
-	for (int j=j1; j<=j2; j++) {
-	  for (int k=k1; k<=k2; k++) {
-	    // find the list of all segments belonging to the indicated grid index
-	    int* nearby_segment_ids = nullptr;
-	    int Nsegments = members_hash.find_segments_in_grid_cell(i,j,k,nearby_segment_ids);
 
-	    // include contact interaction forces with nearby (unique) members:
-	    for (int s=0; s < Nsegments; s++) segment_ids.insert(nearby_segment_ids[s]);
+    if (num_members > 0) {
+    
+      // find the range of grid cells that overlap with the bounding box surrounding the current particle
+      int i1,j1,k1,i2,j2,k2;
+      if (members_hash.find_grid_cells_overlapping_bounding_box(xp-rp,yp-rp,zp-rp,
+								xp+rp,yp+rp,zp+rp,
+								i1,j1,k1,i2,j2,k2)) {
+	// loop over the full range of grid cells that overlap with the particle's bounding box
+	std::set<int> segment_ids;
+	for (int i=i1; i<=i2; i++) {
+	  for (int j=j1; j<=j2; j++) {
+	    for (int k=k1; k<=k2; k++) {
+	      // find the list of all segments belonging to the indicated grid index
+	      int* nearby_segment_ids = nullptr;
+	      int Nsegments = members_hash.find_segments_in_grid_cell(i,j,k,nearby_segment_ids);
+
+	      // include contact interaction forces with nearby (unique) members:
+	      for (int s=0; s < Nsegments; s++) segment_ids.insert(nearby_segment_ids[s]);
+	    }
 	  }
 	}
+	// apply contact forces between the current particle and the found (unique) segments
+	for (int s : segment_ids) {
+	  DEBUG(std::cout << "Contact occured with segment " << s << std::endl;)
+	    apply_contact_force(s,contact_stiff,contact_damp,rp,xp,yp,zp,vxp,vyp,vzp,fxp,fyp,fzp);
+	}
       }
-      // apply contact forces between the current particle and the found (unique) segments
-      for (int s : segment_ids) {
-	DEBUG(std::cout << "Contact occured with segment " << s << std::endl;)
-	apply_contact_force(s,contact_stiff,contact_damp,rp,xp,yp,zp,vxp,vyp,vzp,fxp,fyp,fzp);
-      }
-    }
+
+    } // if (num_members > 0)
     
   } // find_and_apply_contact_forces()
 
