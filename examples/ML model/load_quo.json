@@ -1,0 +1,212 @@
+{
+    "Applications": {
+        "FEM": {
+            "Application": "OpenSeesPy",
+            "ApplicationData": {
+                "MS_Path": "//wsl.localhost/Ubuntu/root/Research/SWIRL/examples",
+                "PA_Path": "//wsl.localhost/Ubuntu/root/Research/SWIRL/examples",
+                "mainScript": "1.Run_Particle.py",
+                "parametersScript": "Params1.py",
+                "postprocessScript": ""
+            }
+        },
+        "UQ": {
+            "Application": "Dakota-UQ",
+            "ApplicationData": {
+            }
+        }
+    },
+    "EDP": [
+        {
+            "length": 1000,
+            "name": "displacement_z_1000",
+            "type": "field"
+        },
+        {
+            "length": 1000,
+            "name": "radius_1000",
+            "type": "field"
+        }
+    ],
+    "FEM": {
+    },
+    "UQ": {
+        "parallelExecution": true,
+        "samplingMethodData": {
+            "method": "LHS",
+            "samples": 200,
+            "seed": 949
+        },
+        "saveWorkDir": true,
+        "uqType": "Forward Propagation"
+    },
+    "correlationMatrix": [
+        1,
+        0,
+        0,
+        1
+    ],
+    "localAppDir": "{Current_Dir}/C:/Users/Resea/Downloads/quoFEM_Windows_Download_2024-10-09 00-13-12/quoFEM_Windows_Download",
+    "randomVariables": [
+        {
+            "distribution": "Uniform",
+            "inputType": "Parameters",
+            "lowerbound": 0.01,
+            "name": "parti_diameter",
+            "refCount": 1,
+            "upperbound": 0.5,
+            "value": "RV.parti_diameter",
+            "variableClass": "Uncertain"
+        },
+        {
+            "distribution": "Uniform",
+            "inputType": "Parameters",
+            "lowerbound": 0.5,
+            "name": "parti_dens",
+            "refCount": 1,
+            "upperbound": 5,
+            "value": "RV.parti_dens",
+            "variableClass": "Uncertain"
+        }
+    ],
+    "remoteAppDir": "{Current_Dir}/C:/Users/Resea/Downloads/quoFEM_Windows_Download_2024-10-09 00-13-12/quoFEM_Windows_Download",
+    "resultType": "SimCenterUQResultsSampling",
+    "runType": "runningLocal",
+    "spreadsheet": {
+        "data": [
+            1,
+            0.184717731,
+            0.9392710945,
+            50.45818684,
+            12.87961148,
+            -27.62468057,
+            -70.40551605,
+            49.6816868,
+            2,
+            0.04123476421,
+            0.6753222801,
+            50.16418863,
+            12.809624,
+            -27.37457509,
+            -70.44284908,
+            49.0141123,
+            3,
+            0.2843161448,
+            0.7906699788,
+            50.50098537,
+            12.86392871,
+            -27.66834942,
+            -70.40101826,
+            49.8072624,
+            4,
+            0.16062724,
+            0.5688118787,
+            50.34822157,
+            12.89777693,
+            -27.52296697,
+            -70.41836303,
+            49.40019919,
+            5,
+            0.07530806841,
+            0.7343990256,
+            50.26499105,
+            12.87968212,
+            -27.45326828,
+            -70.42902609,
+            49.21563933,
+            6,
+            0.1325097232,
+            0.9581396845,
+            50.40487891,
+            12.89297337,
+            -27.5737721,
+            -70.4115522,
+            49.53892147,
+            7,
+            0.2347982765,
+            0.510776013,
+            50.39494916,
+            12.89480028,
+            -27.56454491,
+            -70.41269392,
+            49.51343827,
+            8,
+            0.01152254266,
+            0.8569287754,
+            50.04803077,
+            12.69149577,
+            -27.28998899,
+            -70.4602933,
+            48.8032711,
+            9,
+            0.2668509954,
+            0.8460193191,
+            50.50167463,
+            12.86357755,
+            -27.66907701,
+            -70.40094898,
+            49.80937964,
+            10,
+            0.118731583,
+            0.6218233381,
+            50.31218872,
+            12.89413195,
+            -27.49217239,
+            -70.42289386,
+            49.31787417
+        ],
+        "headings": [
+            "Run #",
+            "parti_diameter",
+            "parti_dens",
+            "displacement_x_5_1",
+            "displacement_x_5_2",
+            "displacement_x_5_3",
+            "displacement_x_5_4",
+            "displacement_x_5_5",
+            ""
+        ],
+        "isSurrogate": false,
+        "nrv": 2,
+        "numCol": 8,
+        "numRow": 10
+    },
+    "summary": [
+        {
+            "kurtosis": 3.184435745816716,
+            "mean": 50.339829565,
+            "name": "displacement_x_5_1",
+            "skewness": -0.8728706064009665,
+            "stdDev": 0.14752573046087766
+        },
+        {
+            "kurtosis": 8.736908411354126,
+            "mean": 12.856760216000001,
+            "name": "displacement_x_5_2",
+            "skewness": -2.348430205809817,
+            "stdDev": 0.06369813671637375
+        },
+        {
+            "kurtosis": 2.7528616776543617,
+            "mean": -27.523339572999998,
+            "name": "displacement_x_5_3",
+            "skewness": 0.6487911298728042,
+            "stdDev": 0.12438446568812088
+        },
+        {
+            "kurtosis": 3.729373231933266,
+            "mean": -70.420515477,
+            "name": "displacement_x_5_4",
+            "skewness": -1.0957492891651235,
+            "stdDev": 0.019129019453893715
+        },
+        {
+            "kurtosis": 2.5931416778091005,
+            "mean": 49.410178467,
+            "name": "displacement_x_5_5",
+            "skewness": -0.5498126235596569,
+            "stdDev": 0.3316057657313664
+        }
+    ],
+    "workingDir": "{Current_Dir}/C:/Users/Resea/OneDrive/Documents/quoFEM/LocalWorkDir"
+}
