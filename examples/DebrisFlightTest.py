@@ -95,9 +95,6 @@ print(cov_logX)
 num_samples = 1000
 samples = np.exp(multivariate_normal.rvs(mean=mean_logX, cov=cov_logX, size=num_samples, random_state=None))
 
-# wipe the SWIRL module (reset all internal state data structures)
-SWIRL.wipe()
-
 # plot results
 xgrid, ygrid = np.mgrid[-1:max(logX[:,0]):.01, -1:max(logX[:,1]):.01]
 pos = np.dstack((xgrid, ygrid))
