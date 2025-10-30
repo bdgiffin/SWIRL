@@ -8,6 +8,7 @@
 #include <vector>
 #include <limits>
 #include <cmath>
+#include <memory>
 
 
 // ======================================================================== //

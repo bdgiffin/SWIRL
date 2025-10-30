@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include <vector>
 #include <cmath>
+#include <memory>
 
 
 // ======================================================================== //

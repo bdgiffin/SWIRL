@@ -8,6 +8,7 @@
 #include <vector>
 #include <set>
 #include <cmath>
+#include <memory>
 
 
 // ======================================================================== //
