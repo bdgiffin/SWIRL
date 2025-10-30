@@ -49,6 +49,8 @@ API.get_particle_positions.argtypes = [ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
 API.get_particle_positions.restype  = None
 API.get_wind_field_data.argtypes = [c_size_t, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
 API.get_wind_field_data.restype  = None
+API.finalize.argtypes = None
+API.finalize.restype  = None
 
 # ---------------------------------------------------------------------------- #
 
@@ -170,12 +172,20 @@ def output_state(time):
 
 # ---------------------------------------------------------------------------- #
 
-# Close the connection to the SWIRL library and any Exodus files
+# Close the connection to the Exodus files
 def finalize():
 
     # Close the Exodus file
     if (num_particles > 0):
         exo.close()
+
+# ---------------------------------------------------------------------------- #
+
+# Close the connection to the SWIRL library
+def wipe():
+
+    # Call SWIRL finalization API function
+    API.finalize()
 
 # ---------------------------------------------------------------------------- #
 

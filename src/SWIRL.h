@@ -26,7 +26,32 @@ struct SWIRL {
   // Default constructor
   SWIRL(void) { }
 
+  // Move assignment
+  SWIRL& operator=(SWIRL&& other) {
+    time = other.time;
+    dt_scale_factor = other.dt_scale_factor;
+    gz = other.gz;
+    is_initialized = other.is_initialized;
+
+    wind_model = std::move(other.wind_model);
+    debris = other.debris;
+    members = other.members;
+    return *this;
+  }
+
+  // Destructor method
+  ~SWIRL() {
+
+    DEBUG(std::cout << "Finalizing SWIRL object" << std::endl;)
+    
+    // Delete the WindField model
+    //if (wind_model != nullptr) { /* delete wind_model; */ }
+    
+  } // destructor()
+
   bool initialized(void) { return is_initialized; }
+  
+  // ---------------------------------------------------------------------- //
 
   // Initialize the particle dynamics simulation
   void initialize() {
@@ -151,7 +176,7 @@ public:
   double gz;   // Gravitational acceleration constant
   bool   is_initialized = false; // Initialization flag
 
-  WindField* wind_model; // Wind field model interface
+  std::unique_ptr<WindField> wind_model; // Wind field model interface
   Particles  debris;     // Compact debris represented as spherical particles
   Structure  members;    // Structural members represented as cylindrical rods
   

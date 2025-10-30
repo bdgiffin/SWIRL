@@ -194,7 +194,7 @@ struct Structure {
   
   // ---------------------------------------------------------------------- //
   
-  void apply_drag_forces(WindField* wind_model, double time) {
+  void apply_drag_forces(std::unique_ptr<WindField>& wind_model, double time) {
 
     if (num_members > 0) {
 

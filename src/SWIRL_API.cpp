@@ -90,6 +90,13 @@ extern "C" {
     SWIRL_instance.wind_model->get_fluid_velocity_and_density(Npoints,SWIRL_instance.time,x,y,z,vx,vy,vz,rhof);
   } // get_particle_field_data()
   
+  // ------------------------------------------------------------------------ //
+
+  // Finalize SWIRL instance to prepare for possible re-initialization
+  void finalize(void) {
+    SWIRL_instance = SWIRL();
+  } // finalize()
+  
 // ======================================================================== //
 
   // The main API function called by OpenSees to initialize the external module

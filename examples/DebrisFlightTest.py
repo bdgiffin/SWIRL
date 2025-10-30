@@ -54,7 +54,7 @@ time = 0.0 # [s] starting time
 dt   = 0.001 # [s] time increment
 SWIRL.API.update_state(time) # required for initialization
 SWIRL.output_state(time)
-for step_id in range(1,1000):
+for step_id in range(1,100):
     time = time + dt
     SWIRL.API.update_state(time)
     SWIRL.output_state(time)
@@ -94,6 +94,9 @@ print(cov_logX)
 # randomly sample from the fitted distribution
 num_samples = 1000
 samples = np.exp(multivariate_normal.rvs(mean=mean_logX, cov=cov_logX, size=num_samples, random_state=None))
+
+# wipe the SWIRL module (reset all internal state data structures)
+SWIRL.wipe()
 
 # plot results
 xgrid, ygrid = np.mgrid[-1:max(logX[:,0]):.01, -1:max(logX[:,1]):.01]

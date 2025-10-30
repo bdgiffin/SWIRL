@@ -24,6 +24,8 @@ public:
   // Default (blank) initialization routine
   virtual void initialize(void) { }
 
+  virtual ~WindField() { } // Declare destructor as virtual
+
   // Pure virtual method to compute the fluid velocity and density at a specified time,
   // and at multiple evaluation points simultaneously
   virtual void get_fluid_velocity_and_density(int num_points, double time,
@@ -47,6 +49,8 @@ class BakerSterlingVortex : public WindField {
 public:
 
   // ------------------- Declare public member functions ------------------ //
+  
+  ~BakerSterlingVortex() { }
 
   // Parameterized constructor method
   BakerSterlingVortex(double* parameters) : WindField() {
@@ -181,6 +185,8 @@ private:
 class RankineVortex : public WindField {
 public:
 
+  ~RankineVortex() { }
+
   // ------------------- Declare public member functions ------------------ //
 
   // Parameterized constructor method
@@ -273,14 +279,14 @@ private:
 
 
 // Factory method to create a new WindField model from (generic) parameterized inputs
-WindField* new_WindField(const char* type_cstr, double* parameters) {
+std::unique_ptr<WindField> new_WindField(const char* type_cstr, double* parameters) {
 
   // Attempt to create a new wind field model given the passed input parameters
   std::string type(type_cstr);
   if        (type == "BakerSterlingVortex") {
-    return new BakerSterlingVortex(parameters);
+    return std::make_unique<BakerSterlingVortex>(parameters);
   } else if (type == "RankineVortex") {
-    return new RankineVortex(parameters);
+    return std::make_unique<RankineVortex>(parameters);
   } else {
     std::cerr << "ERROR in `" <<  __func__ << "`; unrecognized WindField type: " << type << std::endl;
     return nullptr;

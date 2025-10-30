@@ -78,7 +78,7 @@ struct Particles {
   // ---------------------------------------------------------------------- //
 
   // Initialize the Particles object (assuming all particles have been defined)
-  void initialize(WindField* wind_model, double initial_time = 0.0, double new_drag_coeff = 0.47, double new_contact_stiff = 1.0e+4, double new_contact_damp_ratio = 0.5) {
+  void initialize(std::unique_ptr<WindField>& wind_model, double initial_time = 0.0, double new_drag_coeff = 0.47, double new_contact_stiff = 1.0e+4, double new_contact_damp_ratio = 0.5) {
     
     DEBUG(std::cout << "Initializing Particles object with " << num_particles << " particles defined" << std::endl;)
 
@@ -166,7 +166,7 @@ struct Particles {
   // ---------------------------------------------------------------------- //
 
   // Apply drag forces to all particles
-  void apply_drag_forces(WindField* wind_model, double time) {
+  void apply_drag_forces(std::unique_ptr<WindField>& wind_model, double time) {
 
     // declare persistent static data arrays
     static std::vector<double> vxf(num_particles);
