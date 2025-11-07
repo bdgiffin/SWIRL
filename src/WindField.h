@@ -105,7 +105,7 @@ public:
       double zbar = (z[i]-zct)/zm;
 
       // Ignore points that are sufficiently far away
-      if ((rbar > 100.0) || (zbar > 100.0)) {
+      if ((rbar > rbar_max) || (zbar > zbar_max)) {
 	vx[i]   = 0.0;
 	vy[i]   = 0.0;
 	vz[i]   = 0.0;
@@ -175,6 +175,10 @@ private:
   double vxc; // [m/s]
   double vyc; // [m/s]
   double vzc; // [m/s]
+
+  // Define limits
+  double rbar_max = std::numeric_limits<double>::max();
+  double zbar_max = std::numeric_limits<double>::max();
 
 }; // BakerSterlingVortex
 

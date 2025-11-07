@@ -243,7 +243,7 @@ struct Structure {
 
 	// compute the total drag load, applied in the same direction as the relative wind velocity
 	double area = 2.0*radius[i]*proj_length;
-	double norm_force = 0.5*rhof[i]*drag_coeff[i]*area*wind_speed;
+	double norm_force = 0.5*rhof[i]*drag_coeff[i]*area*wind_speed*wind_speed;
 	double drag_force[3] = { norm_force*wind_direction[0], norm_force*wind_direction[1], norm_force*wind_direction[2] };
 
 	// apply the drag force evenly between the two end-points of the member
