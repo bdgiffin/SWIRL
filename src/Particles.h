@@ -7,7 +7,6 @@
 #include <cmath>
 #include <memory>
 
-
 // ======================================================================== //
 
 
@@ -42,6 +41,16 @@ struct Particles {
     
   } // define_particles()
 
+  // ---------------------------------------------------------------------- //
+
+  void define_control_volume(double x0_new, double y0_new, double theta_in_new, double dtheta_new) {
+    cv_x0 = x0_new;
+    cv_y0 = y0_new;
+    cv_theta_in = theta_in_new;
+    cv_dtheta   = dtheta_new;
+    if (cv_dtheta < 0.0) std::cerr << "WARNING: CV dtheta should be positive!" << std::endl;
+  } // define_control_volume()
+  
   // ---------------------------------------------------------------------- //
 
   // Method to retrieve field data for all compact particles at the current time
@@ -117,6 +126,11 @@ struct Particles {
       vy[i] *= initial_velocity_fraction;
       vz[i] *= initial_velocity_fraction;
     } // for i=1,...,num_particles
+    
+    // (Optionally) constrain the particle positions to fall within the CV
+    if (cv_dtheta > 0.0) {
+      enforce_periodic_control_volume_BCs();
+    }
     
   } // initialize()
   
@@ -249,8 +263,72 @@ struct Particles {
       z[i]  += dt*vz[i];
       
     } // for(i=0...num_particles)
+
+    // (Optionally) constrain the particle positions to fall within the CV
+    if (cv_dtheta > 0.0) {
+      enforce_periodic_control_volume_BCs();
+    }
     
   } // integrate_equations_of_motion()
+  
+  // ---------------------------------------------------------------------- //
+
+  // Constraint the positions of all particles to lie within the
+  // optionally defined periodic control volume
+  void enforce_periodic_control_volume_BCs(void) {
+    const double pi = 4.0 * std::atan(1.0);
+
+    // loop over all particles
+    for (int i=0; i < num_particles; i++) {
+
+      // determine the coordinates of the current particle measured relative
+      // to the vertex of the periodic control volume (the center of the vortex)
+      double dx = x[i] - cv_x0;
+      double dy = y[i] - cv_y0;
+
+      // determine the relative radial and angular coordinates of the particle
+      double r = std::sqrt(dx*dx+dy*dy);
+      double theta = std::atan2(dy,dx);
+
+      // determine the relative (positive) angle between the particle's angular coordinate and cv_theta_in
+      double dtheta = theta - cv_theta_in;
+      if (dtheta < 0.0) dtheta += 2.0*pi; // Add 2*pi if the angle is negative
+
+      // determine whether the particle's angular coordinate lies outside the CV
+      double normalized_dtheta = dtheta / cv_dtheta;
+      if (normalized_dtheta > 1.0) { // particle lies outside the CV: enforce periodic BC
+
+	// determine the particle's current radial and circumferential velocity components
+	// { vR } = [ +cosT +sinT ] * { vx }
+	// { vT }   [ -sinT +cosT ]   { vy }
+	double cosT = std::cos(theta);
+	double sinT = std::sin(theta);
+	double vR = +vx[i]*cosT+vy[i]*sinT;
+	double vT = -vx[i]*sinT+vy[i]*cosT;
+
+	// confine the particle's relative angular coordinate to lie within the CV
+        normalized_dtheta -= int(normalized_dtheta);
+	dtheta = normalized_dtheta*cv_dtheta;
+	theta = cv_theta_in + dtheta;
+
+	// transform the particle's x,y coordinates
+        cosT = std::cos(theta);
+	sinT = std::sin(theta);
+	dx = r*cosT;
+	dy = r*sinT;
+	x[i] = cv_x0 + dx;
+	y[i] = cv_y0 + dy;
+
+	// transform the particles' x,y velocity
+	// [ +cosT -sinT ] * { vR } = { vx }
+	// [ +sinT +cosT ]   { vT }   { vy }
+	vx[i] = +vR*cosT-vT*sinT;
+	vy[i] = +vR*sinT+vT*cosT;
+      }
+      
+    } // for(i=0...num_particles)
+    
+  } // enforce_periodic_control_volume_BCs()
 
   // --------------------- Declare public data members -------------------- //
 
@@ -259,6 +337,12 @@ struct Particles {
   double drag_coeff;         // Drag coefficient for all particles
   double contact_stiff;      // Contact spring stiffness for all particles [N/m] = [kg/s^2]
   double contact_damp_ratio; // Contact damping ratio for all particles
+
+  // Optional parameters specifying the wedge-shaped control volume
+  double cv_x0 = 0.0; // in-plane x-coordinate of the vertex of the wedge (should coincide with the center of the vortex)
+  double cv_y0 = 0.0; // in-plane y-coordinate of the vertex of the wedge (should coincide with the center of the vortex)
+  double cv_theta_in = 0.0; // [radians] the angular coordinate (measured relative to the x-axis) at which the inflow CV surface is defined
+  double cv_dtheta = 0.0; // [radians] the positive angular dimension (measured in radians relative to theta_in) at which the outflow surface is defined
 
   // Data defined separately for each particle
   std::vector<double> mass;         // The masses defined for all particles

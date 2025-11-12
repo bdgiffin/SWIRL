@@ -35,6 +35,16 @@ extern "C" {
   
   // ------------------------------------------------------------------------ //
 
+  // Define a wedge-shaped control volume with periodic inflow/outflow conditions
+  // {x0,y0}:   in-plane coordinates of the vertex of the wedge (should coincide with the center of the vortex)
+  // theta_in:  the angular coordinate (measured in radians relative to the x-axis) at which the inflow  surface is defined
+  // dtheta:    the positive angular dimension (measured in radians relative to theta_in) at which the outflow surface is defined
+  void define_particle_control_volume(double x0, double y0, double theta_in, double dtheta) {
+    SWIRL_instance.debris.define_control_volume(x0,y0,theta_in,dtheta);
+  } // define_particle_control_volume()
+  
+  // ------------------------------------------------------------------------ //
+
   // (Legacy) method to define all structural members within the simulation
   // n_particles: the total number of compact (spherical) particles to define
   // m: array of particle masses

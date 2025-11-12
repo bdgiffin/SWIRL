@@ -18,34 +18,83 @@ import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------------------------- #
 
+# Define generic problem dimensional parameters:
+
+# Define the x,y coordinate center of the vortex
+x_vortex = 10.0 # [m]
+y_vortex =  0.0 # [m]
+
+# Define the x,y coordinate center of the tower
+x_tower = 0.0 # [m]
+y_tower = 0.0 # [m]
+
+# Define the base width and height of the tower
+base_width_tower = 3.5  # [m]
+height_tower     = 20.0 # [m]
+
+# Pre-compute relevant derived dimensional quantities:
+
+# Determine the (radial) distace between the tower and the vortex
+distance_to_tower_from_vortex = sqrt(pow(x_tower-x_vortex,2) + pow(y_tower-y_vortex,2))
+
+# Determine the directional position of the center of the tower (as an angle measured from the x-axis) relative to the center of the vortex
+direction_to_tower_from_vortex = atan2(y_tower-y_vortex, x_tower-x_vortex)
+
+# Specify the position and dimensions of the cylinder containing randomly generated particles, such that:
+#  1) The particle cylinder center is at the vortex center
+particle_cylinder_center = [x_vortex,y_vortex,0.0] # [m,m,m]
+#  2) The particle cylinder radius is defined to encompass the tower
+particle_cylinder_radius = distance_to_tower_from_vortex + base_width_tower # [m]
+#  3) The particle cylinder height is greater than the height of the tower
+particle_cylinder_height = 1.5*height_tower # [m]
+
+# ---------------------------------------------------------------------------- #
+
 # Call C/C++ library API functions from Python:
 
 # Define randomized spherical particle parameters
 num_particles = 1000
-particle_density         =  0.5 # [kg/m^3] (roughly the density of wood)
-particle_min_diameter    = 0.01 # [m]
-particle_diameter_range  =  1.0 # [m]
-particle_cylinder_radius = 40.0 # [m]
-particle_cylinder_height = 40.0 # [m]
-particle_cylinder_center = [0.0,0.0,0.0] # [m,m,m]
+particle_density        =  0.5 # [kg/m^3] (roughly the density of wood)
+particle_min_diameter   = 0.01 # [m]
+particle_diameter_range =  1.0 # [m]
 random_seed = 1
 SWIRL.create_random_particles(num_particles,particle_density,particle_min_diameter,particle_diameter_range,particle_cylinder_radius,particle_cylinder_height,particle_cylinder_center,random_seed)
 
 # Create the parameterized wind field model (Baker Sterling Vortex)
 wind_field_params = np.zeros(12)
-wind_field_params[0]  = 100.0 # [m/s]      Um: reference radial velocity
-wind_field_params[1]  = 1.0   # [m]        rm: reference radius
-wind_field_params[2]  = 4.0   # [m]        zm: reference height
-wind_field_params[3]  = 2.0   #             S: swirl ratio (ratio of max circumferential velocity to radial velocity at reference height)
-wind_field_params[4]  = 2.0   #         gamma: 
-wind_field_params[5]  = 1.293 # [kg/m^3] rho0: reference density of air at STP
-wind_field_params[6]  = 10.0  # [m]       xc0: x-position of the vortex center
-wind_field_params[7]  = 0.0   # [m]       yc0: y-position of the vortex center
-wind_field_params[8]  = 0.0   # [m]       zc0: z-position of the vortex center
-wind_field_params[9]  = 0.0   # [m/s]     vxc: x-velocity of the vortex center
-wind_field_params[10] = 0.0   # [m/s]     vyc: y-velocity of the vortex center
-wind_field_params[11] = 0.0   # [m/s]     vzc: z-velocity of the vortex center
+wind_field_params[0]  = 100.0    # [m/s]      Um: reference radial velocity
+wind_field_params[1]  = 1.0      # [m]        rm: reference radius
+wind_field_params[2]  = 4.0      # [m]        zm: reference height
+wind_field_params[3]  = 2.0      #             S: swirl ratio (ratio of max circumferential velocity to radial velocity at reference height)
+wind_field_params[4]  = 2.0      #         gamma: 
+wind_field_params[5]  = 1.293    # [kg/m^3] rho0: reference density of air at STP
+wind_field_params[6]  = x_vortex # [m]       xc0: x-position of the vortex center
+wind_field_params[7]  = y_vortex # [m]       yc0: y-position of the vortex center
+wind_field_params[8]  = 0.0      # [m]       zc0: z-position of the vortex center
+wind_field_params[9]  = 0.0      # [m/s]     vxc: x-velocity of the vortex center
+wind_field_params[10] = 0.0      # [m/s]     vyc: y-velocity of the vortex center
+wind_field_params[11] = 0.0      # [m/s]     vzc: z-velocity of the vortex center
 SWIRL.API.define_wind_field(b"BakerSterlingVortex",wind_field_params)
+
+# OPTIONAL: define bounding wedge-shaped control volume with periodic inflow/outflow BCs to contain all particles
+use_particle_cv = True
+if (use_particle_cv):
+    # Specify the x,y coordinate center of the wedge-shaped particle control volume (should be the same as the center of the vortex):
+    cv_x0 = x_vortex # [m] (x-center of the vortex)
+    cv_y0 = y_vortex # [m] (y-center of the vortex)
+
+    # Specify the angular thickness of the wedge-shaped control volume:
+    # (this should be determined based on the tower dimensions, as well as the relative position of the tower compared to the vortex)
+    # (in this example, the width of the wedged-shaped CV is 5.0 times the base width of the tower, and is capped at a max of 2pi radians)
+    cv_dtheta = min(5.0*base_width_tower/(distance_to_tower_from_vortex+1.0e-16), 2.0*pi) # [radians]
+
+    # Specify the angular coordinate of the inflow boundary plane for the wedge-shaped control volume:
+    # (this should be determined based on the relative position of the tower compared to the vortex)
+    cv_theta_in = direction_to_tower_from_vortex - 0.5*cv_dtheta; # [radians]
+    # NOTE: the outflow boundary plane is positioned at an angular coordinate of: cv_theta_out = cv_theta_in + cv_dtheta
+
+    # Define the wedge-shaped control volume in SWIRL (pass relevant parameters to corresponding SWIRL API function):
+    SWIRL.API.define_particle_control_volume(cv_x0,cv_y0,cv_theta_in,cv_dtheta)
 
 # RUN analysis -------------------------------------------------------------
 
