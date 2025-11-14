@@ -15,6 +15,7 @@ from math import *
 import numpy as np
 from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
+import time as perftime
 
 # ---------------------------------------------------------------------------- #
 
@@ -48,6 +49,9 @@ particle_cylinder_radius = distance_to_tower_from_vortex + base_width_tower # [m
 #  3) The particle cylinder height is greater than the height of the tower
 particle_cylinder_height = 1.5*height_tower # [m]
 
+# Determine the radius of the inner cylinder for particle generation (particles will NOT be initialized within the inner cylinder)
+particle_cylinder_inner_radius = max(distance_to_tower_from_vortex - 3.0*base_width_tower, 1.0e-16)
+
 # ---------------------------------------------------------------------------- #
 
 # Call C/C++ library API functions from Python:
@@ -58,7 +62,12 @@ particle_density        =  0.5 # [kg/m^3] (roughly the density of wood)
 particle_min_diameter   = 0.01 # [m]
 particle_diameter_range =  1.0 # [m]
 random_seed = 1
-SWIRL.create_random_particles(num_particles,particle_density,particle_min_diameter,particle_diameter_range,particle_cylinder_radius,particle_cylinder_height,particle_cylinder_center,random_seed)
+average_radial_coordinate   = 2.0 # [m] the mean radial coordinate at which particles are likely to be positioned (determined according to equation 36 in Baker & Sterling paper: https://www.sciencedirect.com/science/article/pii/S0167610517301174)
+average_vertical_coordinate = 1.0 # [m] the mean vertical coordinate at which particles are likely to be positioned (determined according to equation 37 in Baker & Sterling paper: https://www.sciencedirect.com/science/article/pii/S0167610517301174)
+radial_coordinate_stddev    = 0.25*average_radial_coordinate  # [m] The standard deviation characterizing the lognormal distribution of particles' initial radial coordinates   (this example assumes a COV of 0.25)
+vertical_coordinate_stddev  = 0.5*average_vertical_coordinate # [m] The standard deviation characterizing the lognormal distribution of particles' initial vertical coordinates (this example assumes a COV of 0.5)
+#SWIRL.create_random_particles(num_particles,particle_density,particle_min_diameter,particle_diameter_range,particle_cylinder_radius,particle_cylinder_height,particle_cylinder_center,random_seed)
+SWIRL.create_constrained_random_particles(num_particles,particle_density,particle_min_diameter,particle_diameter_range,particle_cylinder_radius,particle_cylinder_height,particle_cylinder_center,random_seed,particle_cylinder_inner_radius,average_radial_coordinate,radial_coordinate_stddev,average_vertical_coordinate,vertical_coordinate_stddev)
 
 # Create the parameterized wind field model (Baker Sterling Vortex)
 wind_field_params = np.zeros(12)
@@ -98,6 +107,9 @@ if (use_particle_cv):
 
 # RUN analysis -------------------------------------------------------------
 
+# Wall time for performance measurement
+start_time = perftime.perf_counter()
+
 # perform the analysis
 time = 0.0 # [s] starting time
 dt   = 0.001 # [s] time increment
@@ -108,6 +120,11 @@ for step_id in range(1,100):
     SWIRL.API.update_state(time)
     SWIRL.output_state(time)
 
+# Report wall time for performance measurement
+end_time = perftime.perf_counter()
+elapsed_time = end_time - start_time
+print(f"Execution time: {elapsed_time:.6f} seconds")
+    
 # finalize the SWIRL module (close the Exodus files)
 SWIRL.finalize()
 

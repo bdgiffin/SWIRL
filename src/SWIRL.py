@@ -15,6 +15,7 @@ import time as timer
 from datetime import timedelta
 import numpy as np
 from argparse import ArgumentParser
+from scipy.stats import truncnorm
 
 # ---------------------------------------------------------------------------- #
 
@@ -56,6 +57,91 @@ API.finalize.restype  = None
 
 # ---------------------------------------------------------------------------- #
 
+# Generate a log-normally distributed collection of particles with variable diameters and positions within a constrained range,
+# and initialize the SWIRL object with these particles prior to initialization
+def create_constrained_random_particles(n_particles,density,min_diameter,diameter_range,cylinder_radius,cylinder_height,cylinder_center,random_seed,inner_cylinder_radius,average_radial_coordinate,radial_coordinate_stddev,average_vertical_coordinate,vertical_coordinate_stddev):
+    # n_particles     [int]    The total number of spherical debris particles to be defined
+    # density         [kg/m^3] The constant mass density assigned to all particles
+    # min_diameter    [m]      The minimum particle diameter
+    # diameter_range  [m]      The range of random particle diameters
+    # cylinder_radius [m]      The radius of the cylinder in which particles will be randomly distributed
+    # cylinder_height [m]      The height of the cylinder in which particles will be randomly distributed
+    # cylinder_center [m,m,m]  The x,y,z coordinate center of cylinder at the time of initialization
+    # random_seed     [int]    The random number generator seed value, to ensure reproducibility
+    # Extra variables:
+    # inner_cylinder_radius       [m] The radius of the inner cylinder (particles will NOT be initialized within the inner cylinder)
+    # average_radial_coordinate   [m] The mean radial coordinate at which particles are likely to be positioned
+    # radial_coordinate_stddev    [m] The standard deviation characterizing the lognormal distribution of particles' initial radial coordinates
+    # average_vertical_coordinate [m] The mean vertical coordinate at which particles are likely to be positioned
+    # vertical_coordinate_stddev  [m] The standard deviation characterizing the lognormal distribution of particles' initial vertical coordinates
+
+    global num_particles
+    num_particles = n_particles
+
+    # Instantiate a random number generator (rng) initialized with the provided random_seed value
+    rng = np.random.default_rng(random_seed)
+
+    # Generate a random collection of spherical particles with variable diameters but constant density
+    diameters = min_diameter + diameter_range*rng.random(n_particles) # [m]
+    masses = np.zeros(n_particles)
+    for i in range(0,n_particles):
+        iradius = 0.5*diameters[i]
+        masses[i] = density*(4.0/3.0)*math.pi*iradius*iradius*iradius # [kg] (assuming roughly spherical shape)
+
+    # Randomize the initial positions of all particles
+    rng_state = np.random.RandomState(random_seed)
+    position_x = np.zeros(n_particles)
+    position_y = np.zeros(n_particles)
+    position_z = np.zeros(n_particles)
+    radial_position   = sample_constrained_lognormal(average_radial_coordinate, radial_coordinate_stddev, inner_cylinder_radius, cylinder_radius, n_particles, rng_state)
+    circum_position   = 2.0*math.pi*rng.random(n_particles)
+    vertical_position = sample_constrained_lognormal(average_vertical_coordinate, vertical_coordinate_stddev, 1.0e-16, cylinder_height, n_particles, rng_state)
+    for i in range(0,n_particles):
+        position_x[i] = cylinder_center[0] + radial_position[i]*math.cos(circum_position[i])
+        position_y[i] = cylinder_center[1] + radial_position[i]*math.sin(circum_position[i])
+        position_z[i] = cylinder_center[2] + vertical_position[i]
+
+    # Call SWIRL initialization API function
+    API.define_particles(n_particles,masses,diameters,position_x,position_y,position_z)
+
+    # Create the Exodus file containing particle info:
+    if (num_particles > 0):
+
+        # create a new Exodus file
+        filename = "particles.exo"
+        try:
+            os.remove(filename)
+        except OSError:
+            pass
+        global exo
+        exo = pyexodus.exodus(file=filename, mode='w', array_type='numpy', title='Debris particle trajectory time-history file - produced by SWIRL module', numDims=3, numNodes=num_particles, numElems=num_particles, numBlocks=1, numNodeSets=0, numSideSets=0, io_size=0, compression=None)
+
+        # put node coordinates
+        exo.put_coords(xCoords=position_x,yCoords=position_y,zCoords=position_z)
+
+        # put element block info for all particles
+        exo.put_elem_blk_info(id=1, elemType='SPHERE', numElems=num_particles, numNodesPerElem=1, numAttrsPerElem=0)
+        exo.put_elem_connectivity(id=1, connectivity=np.arange(num_particles), shift_indices=1, chunk_size_in_mb=128)
+
+        # set the number of output node (particle) variables and their names
+        num_node_variables = 3 + 3 + 3
+        exo.set_node_variable_number(num_node_variables)
+        exo.put_node_variable_name("displacement_x", 1)
+        exo.put_node_variable_name("displacement_y", 2)
+        exo.put_node_variable_name("displacement_z", 3)
+        exo.put_node_variable_name("velocity_x",     4)
+        exo.put_node_variable_name("velocity_y",     5)
+        exo.put_node_variable_name("velocity_z",     6)
+        exo.put_node_variable_name("force_x",        7)
+        exo.put_node_variable_name("force_y",        8)
+        exo.put_node_variable_name("force_z",        9)
+
+        # initialize the total number of time states
+        global step_id
+        step_id = 0
+
+# ---------------------------------------------------------------------------- #
+
 # Generate a randomized collection of particles with variable diameters and positions,
 # and initialize the SWIRL object with these particles prior to initialization
 def create_random_particles(n_particles,density,min_diameter,diameter_range,cylinder_radius,cylinder_height,cylinder_center,random_seed):
@@ -63,7 +149,7 @@ def create_random_particles(n_particles,density,min_diameter,diameter_range,cyli
     # density         [kg/m^3] The constant mass density assigned to all particles
     # min_diameter    [m]      The minimum particle diameter
     # diameter_range  [m]      The range of random particle diameters
-    # cylinder_radius [m]      The diameter of the cylinder in which particles will be randomly distributed
+    # cylinder_radius [m]      The radius of the cylinder in which particles will be randomly distributed
     # cylinder_height [m]      The height of the cylinder in which particles will be randomly distributed
     # cylinder_center [m,m,m]  The x,y,z coordinate center of cylinder at the time of initialization
     # random_seed     [int]    The random number generator seed value, to ensure reproducibility
@@ -93,8 +179,6 @@ def create_random_particles(n_particles,density,min_diameter,diameter_range,cyli
 
     # Call SWIRL initialization API function
     API.define_particles(n_particles,masses,diameters,position_x,position_y,position_z)
-
-# ---------------------------------------------------------------------------- #
 
     # Create the Exodus file containing particle info:
     if (num_particles > 0):
@@ -191,3 +275,25 @@ def wipe():
 
 # ---------------------------------------------------------------------------- #
 
+def sample_constrained_lognormal(mu, sigma, lower_bound, upper_bound, Nsamples, rng_state):
+    """
+    Samples from a log-normal distribution in a constrained range using scipy.stats.truncnorm.
+    """
+    # The bounds of the log-normal distribution must be transformed to 
+    # the bounds of the underlying normal distribution using the natural logarithm.
+    log_lower_bound = np.log(lower_bound)
+    log_upper_bound = np.log(upper_bound)
+
+    # Normalize the log-bounds to the standard normal scale (z-scores)
+    a = (log_lower_bound - mu) / sigma
+    b = (log_upper_bound - mu) / sigma
+
+    # Sample from the truncated normal distribution
+    truncated_normal_samples = truncnorm.rvs(a, b, loc=mu, scale=sigma, size=Nsamples, random_state=rng_state)
+
+    # Exponentiate the samples to get the log-normal samples
+    truncated_lognormal_samples = np.exp(truncated_normal_samples)
+    
+    return truncated_lognormal_samples
+
+# ---------------------------------------------------------------------------- #
