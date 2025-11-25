@@ -35,6 +35,14 @@ extern "C" {
   
   // ------------------------------------------------------------------------ //
 
+  // Define all particles within the simulation
+  // set_particles_active: boolean flag 
+  void set_particles_active(bool particles_active) {
+    SWIRL_instance.debris.particles_active = particles_active;
+  } // set_particles_active()
+  
+  // ------------------------------------------------------------------------ //
+
   // Define a wedge-shaped control volume with periodic inflow/outflow conditions
   // {x0,y0}:   in-plane coordinates of the vertex of the wedge (should coincide with the center of the vortex)
   // theta_in:  the angular coordinate (measured in radians relative to the x-axis) at which the inflow  surface is defined

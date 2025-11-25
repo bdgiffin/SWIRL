@@ -98,6 +98,7 @@ struct Particles {
     contact_damp_ratio = new_contact_damp_ratio; // (default = 0.5 for 50% of critical damping relative to the contact stiffness)
 
     // Initialize stored data for all particles
+    ghost.resize(num_particles);
     contact_damp.resize(num_particles);
     x.resize(num_particles);
     y.resize(num_particles);
@@ -117,6 +118,7 @@ struct Particles {
     // initialize the particle's position, and set its initial velocity as a specified fraction of the surrounding fluid velocity
     double initial_velocity_fraction = 0.8;
     for (int i=0; i<num_particles; i++) {
+      ghost[i] = true; // make all particles ghost particles upon initialization
       double critical_damp = 2.0*std::sqrt(contact_stiff*mass[i]);
       contact_damp[i] = contact_damp_ratio*critical_damp;
       x[i]   = x0[i];
@@ -333,10 +335,11 @@ struct Particles {
   // --------------------- Declare public data members -------------------- //
 
   // Common constants defined for all particles
-  int num_particles;         // The total number of particles
-  double drag_coeff;         // Drag coefficient for all particles
-  double contact_stiff;      // Contact spring stiffness for all particles [N/m] = [kg/s^2]
-  double contact_damp_ratio; // Contact damping ratio for all particles
+  int num_particles;            // The total number of particles
+  double drag_coeff;            // Drag coefficient for all particles
+  double contact_stiff;         // Contact spring stiffness for all particles [N/m] = [kg/s^2]
+  double contact_damp_ratio;    // Contact damping ratio for all particles
+  bool particles_active = true; // Logical flag indicating if all particles are active/unfrozen (true - default) or inactive/frozen (false)
 
   // Optional parameters specifying the wedge-shaped control volume
   double cv_x0 = 0.0; // in-plane x-coordinate of the vertex of the wedge (should coincide with the center of the vortex)
@@ -345,6 +348,7 @@ struct Particles {
   double cv_dtheta = 0.0; // [radians] the positive angular dimension (measured in radians relative to theta_in) at which the outflow surface is defined
 
   // Data defined separately for each particle
+  std::vector<bool>   ghost;        // The particle's "ghost" status (true if the particle is a ghost - no contact forces applied to structure; false otherwise)
   std::vector<double> mass;         // The masses defined for all particles
   std::vector<double> radius;       // The radii of all particles
   std::vector<double> contact_damp; // The contact damping for all particles

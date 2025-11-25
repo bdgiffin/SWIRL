@@ -97,12 +97,19 @@ struct SWIRL {
       double t0 = time;
       double time_increment = time_in - time;
 
-      // determine the maximum allowable (stable) time step size
-      double dt_max = dt_scale_factor*debris.stable_time_step();
+      // set default time step size and number of sub-steps
+      double dt_max  = time_increment;
+      int Nsub_steps = 1;
+      double dt_sub  = time_increment;
 
-      // subdivide the increment into sub-steps based upon the stable time step size
-      int Nsub_steps = std::ceil(time_increment/dt_max);
-      double dt_sub = time_increment/Nsub_steps;
+      if (debris.particles_active) {
+	// determine the maximum allowable (stable) time step size
+	dt_max = dt_scale_factor*debris.stable_time_step();
+
+	// subdivide the increment into sub-steps based upon the stable time step size
+	Nsub_steps = std::ceil(time_increment/dt_max);
+	dt_sub = time_increment/Nsub_steps;
+      }
 
       // zero-initialize the impulse applied to the Structure over the current time increment
       members.zero_impulse();
@@ -137,29 +144,33 @@ private:
     time = new_time;
 
     // zero-initialize the forces acting on the Particles and the Structure for the current time step
-    debris.zero_forces();
+    if (debris.particles_active) debris.zero_forces();
     members.zero_forces();
 
     // apply gravitational forces to the Particles
-    debris.apply_gravitational_forces(0.0,0.0,gz);
+    if (debris.particles_active) debris.apply_gravitational_forces(0.0,0.0,gz);
 
     // apply drag forces to the Particles and the Structure
-    debris.apply_drag_forces(wind_model,time);
+    if (debris.particles_active) debris.apply_drag_forces(wind_model,time);
     members.apply_drag_forces(wind_model,time);
 
     // apply contact forces between the Particles and the Structure
-    for (int i=0; i<debris.num_particles; i++) {
-      members.find_and_apply_contact_forces(debris.contact_stiff,debris.contact_damp[i],debris.radius[i],
-    					    debris.x[i],debris.y[i],debris.z[i],
-    					    debris.vx[i],debris.vy[i],debris.vz[i],
-    				            debris.fx[i],debris.fy[i],debris.fz[i]);
+    if (debris.particles_active) {
+      for (int i=0; i<debris.num_particles; i++) {
+	bool ighost = debris.ghost[i];
+	members.find_and_apply_contact_forces(debris.contact_stiff,debris.contact_damp[i],debris.radius[i],
+					      debris.x[i],debris.y[i],debris.z[i],
+					      debris.vx[i],debris.vy[i],debris.vz[i],
+					      debris.fx[i],debris.fy[i],debris.fz[i],ighost);
+	debris.ghost[i] = ighost;
+      }
     }
 
     // apply boundary forces to the Particles
-    debris.apply_boundary_forces(0.0,0.0,0.0,0.0,0.0,1.0);
+    if (debris.particles_active) debris.apply_boundary_forces(0.0,0.0,0.0,0.0,0.0,1.0);
 
     // update the positions and velocities of the Particles
-    debris.integrate_equations_of_motion(dt);
+    if (debris.particles_active) debris.integrate_equations_of_motion(dt);
 
     // update the impulse applied to the Structure
     members.integrate_impulse(dt);

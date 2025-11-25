@@ -22,7 +22,7 @@ import time as perftime
 # Define generic problem dimensional parameters:
 
 # Define the x,y coordinate center of the vortex
-x_vortex = 10.0 # [m]
+x_vortex = 5.0 # [m]
 y_vortex =  0.0 # [m]
 
 # Define the x,y coordinate center of the tower
@@ -47,10 +47,15 @@ particle_cylinder_center = [x_vortex,y_vortex,0.0] # [m,m,m]
 #  2) The particle cylinder radius is defined to encompass the tower
 particle_cylinder_radius = distance_to_tower_from_vortex + base_width_tower # [m]
 #  3) The particle cylinder height is greater than the height of the tower
-particle_cylinder_height = 1.5*height_tower # [m]
+particle_cylinder_height = 1.0*height_tower # [m] 1.5
 
 # Determine the radius of the inner cylinder for particle generation (particles will NOT be initialized within the inner cylinder)
 particle_cylinder_inner_radius = max(distance_to_tower_from_vortex - 3.0*base_width_tower, 1.0e-16)
+
+# Define the "exclusion cylinder" inside of which no particles should be initialized (this should closely enclose the tower)
+exclusion_cylinder_center = [x_tower,y_tower,0.0] # [m,m,m]
+exclusion_cylinder_radius = 0.5*base_width_tower # [m]
+exclusion_cylinder_height = height_tower # [m]
 
 # ---------------------------------------------------------------------------- #
 
@@ -67,7 +72,7 @@ average_vertical_coordinate = 1.0 # [m] the mean vertical coordinate at which pa
 radial_coordinate_stddev    = 0.25*average_radial_coordinate  # [m] The standard deviation characterizing the lognormal distribution of particles' initial radial coordinates   (this example assumes a COV of 0.25)
 vertical_coordinate_stddev  = 0.5*average_vertical_coordinate # [m] The standard deviation characterizing the lognormal distribution of particles' initial vertical coordinates (this example assumes a COV of 0.5)
 #SWIRL.create_random_particles(num_particles,particle_density,particle_min_diameter,particle_diameter_range,particle_cylinder_radius,particle_cylinder_height,particle_cylinder_center,random_seed)
-SWIRL.create_constrained_random_particles(num_particles,particle_density,particle_min_diameter,particle_diameter_range,particle_cylinder_radius,particle_cylinder_height,particle_cylinder_center,random_seed,particle_cylinder_inner_radius,average_radial_coordinate,radial_coordinate_stddev,average_vertical_coordinate,vertical_coordinate_stddev)
+SWIRL.create_constrained_random_particles(num_particles,particle_density,particle_min_diameter,particle_diameter_range,particle_cylinder_radius,particle_cylinder_height,particle_cylinder_center,random_seed,particle_cylinder_inner_radius,average_radial_coordinate,radial_coordinate_stddev,average_vertical_coordinate,vertical_coordinate_stddev,exclusion_cylinder_center,exclusion_cylinder_radius,exclusion_cylinder_height)
 
 # Create the parameterized wind field model (Baker Sterling Vortex)
 wind_field_params = np.zeros(12)
@@ -84,6 +89,11 @@ wind_field_params[9]  = 0.0      # [m/s]     vxc: x-velocity of the vortex cente
 wind_field_params[10] = 0.0      # [m/s]     vyc: y-velocity of the vortex center
 wind_field_params[11] = 0.0      # [m/s]     vzc: z-velocity of the vortex center
 SWIRL.API.define_wind_field(b"BakerSterlingVortex",wind_field_params)
+
+# Modify flag to activate particles
+# (setting "particles_active" to "False" will freeze all particles and prevent contact forces from being applied to the structure - this should be done prior to the start of the static analysis initialization)
+# (setting "particles_active" to "True" will unfreeze all particles and apply contact forces to the structures - this should be done prior to the start of the dynamic analysis)
+SWIRL.API.set_particles_active(False)
 
 # OPTIONAL: define bounding wedge-shaped control volume with periodic inflow/outflow BCs to contain all particles
 use_particle_cv = True
@@ -115,6 +125,15 @@ time = 0.0 # [s] starting time
 dt   = 0.001 # [s] time increment
 SWIRL.API.update_state(time) # required for initialization
 SWIRL.output_state(time)
+for step_id in range(1,100):
+    time = time + dt
+    SWIRL.API.update_state(time)
+    SWIRL.output_state(time)
+
+# Modify flag to activate particles
+# (setting "particles_active" to "False" will freeze all particles and prevent contact forces from being applied to the structure - this should be done prior to the start of the static analysis initialization)
+# (setting "particles_active" to "True" will unfreeze all particles and apply contact forces to the structures - this should be done prior to the start of the dynamic analysis)
+SWIRL.API.set_particles_active(True)
 for step_id in range(1,100):
     time = time + dt
     SWIRL.API.update_state(time)

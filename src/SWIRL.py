@@ -2,7 +2,7 @@
 
 # Python package for calling C/C++ functions from Python
 from ctypes import CDLL, POINTER
-from ctypes import c_size_t, c_double, c_int, c_char_p
+from ctypes import c_size_t, c_double, c_int, c_char_p, c_bool
 
 # Package for reading/writing mesh files
 import pyexodus
@@ -40,6 +40,8 @@ API.define_wind_field.argtypes = [c_char_p, ND_POINTER_1]
 API.define_wind_field.restype  = None
 API.define_particles.argtypes = [c_size_t, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
 API.define_particles.restype  = None
+API.set_particles_active.argtypes = [c_bool]
+API.set_particles_active.restype  = None
 API.define_particle_control_volume.argtypes = [c_double, c_double, c_double, c_double]
 API.define_particle_control_volume.restype  = None
 API.define_members.argtypes = [c_size_t, c_size_t, NI_POINTER_2, c_size_t, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
@@ -59,7 +61,7 @@ API.finalize.restype  = None
 
 # Generate a log-normally distributed collection of particles with variable diameters and positions within a constrained range,
 # and initialize the SWIRL object with these particles prior to initialization
-def create_constrained_random_particles(n_particles,density,min_diameter,diameter_range,cylinder_radius,cylinder_height,cylinder_center,random_seed,inner_cylinder_radius,average_radial_coordinate,radial_coordinate_stddev,average_vertical_coordinate,vertical_coordinate_stddev):
+def create_constrained_random_particles(n_particles,density,min_diameter,diameter_range,cylinder_radius,cylinder_height,cylinder_center,random_seed,inner_cylinder_radius,average_radial_coordinate,radial_coordinate_stddev,average_vertical_coordinate,vertical_coordinate_stddev,exclusion_cylinder_center,exclusion_cylinder_radius,exclusion_cylinder_height):
     # n_particles     [int]    The total number of spherical debris particles to be defined
     # density         [kg/m^3] The constant mass density assigned to all particles
     # min_diameter    [m]      The minimum particle diameter
@@ -74,6 +76,9 @@ def create_constrained_random_particles(n_particles,density,min_diameter,diamete
     # radial_coordinate_stddev    [m] The standard deviation characterizing the lognormal distribution of particles' initial radial coordinates
     # average_vertical_coordinate [m] The mean vertical coordinate at which particles are likely to be positioned
     # vertical_coordinate_stddev  [m] The standard deviation characterizing the lognormal distribution of particles' initial vertical coordinates
+    # exclusion_cylinder_center   [m,m,m] The The x,y,z coordinate center of cylinder inside of which no particles should be initialized
+    # exclusion_cylinder_radius   [m] The radius of the cylinder in which no particles should be initialized
+    # exclusion_cylinder_height   [m] The height of the cylinder in which no particles should be initialized
 
     global num_particles
     num_particles = n_particles
@@ -100,6 +105,16 @@ def create_constrained_random_particles(n_particles,density,min_diameter,diamete
         position_x[i] = cylinder_center[0] + radial_position[i]*math.cos(circum_position[i])
         position_y[i] = cylinder_center[1] + radial_position[i]*math.sin(circum_position[i])
         position_z[i] = cylinder_center[2] + vertical_position[i]
+
+        # Repeatedly check if particle lies inside of the exclusion cylinder (CAUTION: this could result in an infinite loop if the exclusion cylinder is too big)
+        while ((math.sqrt(pow(position_x[i]-exclusion_cylinder_center[0],2)+pow(position_y[i]-exclusion_cylinder_center[1],2)) < exclusion_cylinder_radius) and ((position_z[i] - exclusion_cylinder_center[2]) < exclusion_cylinder_height)):
+            # Attempt to re-initialize the particle's position
+            iradial_position   = sample_constrained_lognormal(average_radial_coordinate, radial_coordinate_stddev, inner_cylinder_radius, cylinder_radius, 1, rng_state)
+            icircum_position   = 2.0*math.pi*rng.random(1)
+            ivertical_position = sample_constrained_lognormal(average_vertical_coordinate, vertical_coordinate_stddev, 1.0e-16, cylinder_height, 1, rng_state)
+            position_x[i] = cylinder_center[0] + iradial_position*math.cos(icircum_position)
+            position_y[i] = cylinder_center[1] + iradial_position*math.sin(icircum_position)
+            position_z[i] = cylinder_center[2] + ivertical_position
 
     # Call SWIRL initialization API function
     API.define_particles(n_particles,masses,diameters,position_x,position_y,position_z)

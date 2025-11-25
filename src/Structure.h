@@ -97,8 +97,8 @@ struct Structure {
       
       DEBUG(std::cout << "Initializing Structure object with " << num_members << " members defined" << std::endl;)
     
-	// initialize stored data for all members
-	fx1.resize(num_members);
+      // initialize stored data for all members
+      fx1.resize(num_members);
       fy1.resize(num_members);
       fz1.resize(num_members);
       fx2.resize(num_members);
@@ -266,7 +266,7 @@ struct Structure {
   void find_and_apply_contact_forces(double contact_stiff, double contact_damp, double rp,
 				     double xp, double yp, double zp,
 				     double vxp, double vyp, double vzp,
-			             double& fxp, double& fyp, double& fzp) {
+			             double& fxp, double& fyp, double& fzp, bool& ghost) {
 
     if (num_members > 0) {
     
@@ -275,25 +275,30 @@ struct Structure {
       if (members_hash.find_grid_cells_overlapping_bounding_box(xp-rp,yp-rp,zp-rp,
 								xp+rp,yp+rp,zp+rp,
 								i1,j1,k1,i2,j2,k2)) {
-	// loop over the full range of grid cells that overlap with the particle's bounding box
-	std::set<int> segment_ids;
-	for (int i=i1; i<=i2; i++) {
-	  for (int j=j1; j<=j2; j++) {
-	    for (int k=k1; k<=k2; k++) {
-	      // find the list of all segments belonging to the indicated grid index
-	      int* nearby_segment_ids = nullptr;
-	      int Nsegments = members_hash.find_segments_in_grid_cell(i,j,k,nearby_segment_ids);
+	// only resolve contact forces with non-ghost particles
+	if (~ghost) {
+	  // loop over the full range of grid cells that overlap with the particle's bounding box
+	  std::set<int> segment_ids;
+	  for (int i=i1; i<=i2; i++) {
+	    for (int j=j1; j<=j2; j++) {
+	      for (int k=k1; k<=k2; k++) {
+		// find the list of all segments belonging to the indicated grid index
+		int* nearby_segment_ids = nullptr;
+		int Nsegments = members_hash.find_segments_in_grid_cell(i,j,k,nearby_segment_ids);
 
-	      // include contact interaction forces with nearby (unique) members:
-	      for (int s=0; s < Nsegments; s++) segment_ids.insert(nearby_segment_ids[s]);
+		// include contact interaction forces with nearby (unique) members:
+		for (int s=0; s < Nsegments; s++) segment_ids.insert(nearby_segment_ids[s]);
+	      }
 	    }
 	  }
+	  // apply contact forces between the current particle and the found (unique) segments
+	  for (int s : segment_ids) {
+	    DEBUG(std::cout << "Contact occured with segment " << s << std::endl;)
+	      apply_contact_force(s,contact_stiff,contact_damp,rp,xp,yp,zp,vxp,vyp,vzp,fxp,fyp,fzp);
+	  }
 	}
-	// apply contact forces between the current particle and the found (unique) segments
-	for (int s : segment_ids) {
-	  DEBUG(std::cout << "Contact occured with segment " << s << std::endl;)
-	    apply_contact_force(s,contact_stiff,contact_damp,rp,xp,yp,zp,vxp,vyp,vzp,fxp,fyp,fzp);
-	}
+      } else if (ghost) { // un-ghost particle if it is not close to the structure
+	ghost = false;
       }
 
     } // if (num_members > 0)
