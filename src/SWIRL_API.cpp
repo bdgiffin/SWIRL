@@ -136,6 +136,14 @@ extern "C" {
   
   // ------------------------------------------------------------------------ //
 
+  // Retrieve metrics concerning discrete impact events
+  void get_impact_events(int *particle_ID, int *segment_ID, double *x, double *y, double *z,
+			 double *start_time, double *end_time, double *impulse, double *max_force) {
+    SWIRL_instance.members.impacts.get_events(particle_ID,segment_ID,x,y,z,start_time,end_time,impulse,max_force);
+  } // get_impact_events()
+  
+  // ------------------------------------------------------------------------ //
+
   // Finalize SWIRL instance to prepare for possible re-initialization
   void finalize(void) {
     SWIRL_instance = SWIRL();

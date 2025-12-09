@@ -233,5 +233,8 @@ print("  # discrete impact events  = " + str(Nimpacts))
 print("max discrete impact force   = " + str(max_force))
 print("max discrete impact impulse = " + str(max_impulse))
 
+# Output all recorded impact events to a separate file for visualization (impact_events.exo)
+SWIRL.output_impact_events()
+
 # finalize the SWIRL module (close the Exodus files)
 SWIRL.finalize()

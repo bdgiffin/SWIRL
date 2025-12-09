@@ -51,7 +51,8 @@ struct ImpactEvent {
   int    particle_ID;
   int    segment_ID;
   double coordinates[3];
-  double time;
+  double start_time;
+  double end_time;
   double impulse   = 0.0;
   double max_force = 0.0;
   bool   is_active;
@@ -72,6 +73,7 @@ struct ImpactEvents {
     if (active_events.count(key) > 0) {
       // update an existing (active) event
       ImpactEvent& existing_event = active_events[key];
+      existing_event.end_time = t;
       existing_event.impulse += fc*dt;
       if (fc > existing_event.max_force) existing_event.max_force = fc;
       existing_event.is_active = true;
@@ -83,13 +85,13 @@ struct ImpactEvents {
       new_event.coordinates[0] = x;
       new_event.coordinates[1] = y;
       new_event.coordinates[2] = z;
-      new_event.time           = t;
+      new_event.start_time     = t;
+      new_event.end_time       = t;
       new_event.impulse        = fc*dt;
       new_event.max_force      = fc;
       new_event.is_active      = true;
       active_events[key] = new_event;
     }
-    
   } // record_event()
 
   void archive_events(void) {
@@ -103,7 +105,8 @@ struct ImpactEvents {
 	it = active_events.erase(it); // erase event, and get iterator for the next event
 	DEBUG(std::cout << "Impact between particle " << events.back().particle_ID << " and member " << events.back().segment_ID << std::endl;)
 	DEBUG(std::cout << "  coordinates: (" << events.back().coordinates[0] << ", " << events.back().coordinates[1] << ", " <<events.back().coordinates[2] << ")" << std::endl;)
-	DEBUG(std::cout << "  time: " << events.back().time << std::endl;)
+	DEBUG(std::cout << "  start_time: " << events.back().start_time << std::endl;)
+	DEBUG(std::cout << "  end_time: " << events.back().end_time << std::endl;)
 	DEBUG(std::cout << "  impulse: " << events.back().impulse << std::endl;)
 	DEBUG(std::cout << "  max_force: " << events.back().max_force << std::endl;)
       }
@@ -118,7 +121,22 @@ struct ImpactEvents {
       if (event.max_force > *max_force) *max_force = event.max_force;
       if (event.impulse > *max_impulse) *max_impulse = event.impulse;
     }
-  }
+  } // get_metrics()
+
+  void get_events(int *particle_ID, int *segment_ID, double *x, double *y, double *z,
+	          double *start_time, double *end_time, double *impulse, double *max_force) {
+    for (int i=0; i<events.size(); i++) {
+      particle_ID[i] = events[i].particle_ID;
+      segment_ID[i]  = events[i].segment_ID;
+      x[i]           = events[i].coordinates[0];
+      y[i]           = events[i].coordinates[1];
+      z[i]           = events[i].coordinates[2];
+      start_time[i]  = events[i].start_time;
+      end_time[i]    = events[i].end_time;
+      impulse[i]     = events[i].impulse;
+      max_force[i]   = events[i].max_force;
+    }
+  } // get_events()
 
   std::map<std::pair<int,int>, ImpactEvent> active_events;
   std::vector<ImpactEvent> events;
@@ -385,9 +403,10 @@ struct Structure {
 	  // apply contact forces between the current particle and the found (unique) segments
 	  for (int s : segment_ids) {
 	    DEBUG(std::cout << "Contact occured with segment " << s << std::endl;)
-	    double fc = apply_contact_force(s,contact_stiff,contact_damp,rp,xp,yp,zp,vxp,vyp,vzp,fxp,fyp,fzp);
+	    double xm, ym, zm;
+	    double fc = apply_contact_force(s,contact_stiff,contact_damp,rp,xp,yp,zp,vxp,vyp,vzp,fxp,fyp,fzp,xm,ym,zm);
 	    if (fc != 0.0) { // record/update discrete impact event
-	      impacts.record_event(particle_ID,s,xp,yp,zp,time,fc,dt);
+	      impacts.record_event(particle_ID,s,xm,ym,zm,time,fc,dt);
 	    }
 	  }
 	}
@@ -403,7 +422,8 @@ struct Structure {
   
   // compute contact interaction force between a single member "s" and a particle "p"
   double apply_contact_force(int s, double contact_stiff, double contact_damp, double rp, double xp, double yp, double zp,
-	  		     double vxp, double vyp, double vzp, double& fxp, double& fyp, double& fzp) {
+	  		     double vxp, double vyp, double vzp, double& fxp, double& fyp, double& fzp,
+			     double& xm, double& ym, double& zm) {
     
     // get the shifted coordinates of the joints of the current member
     // measured relative to the current particle's position
@@ -474,6 +494,11 @@ struct Structure {
       fx2[s] -= xi2*fc*dx;
       fy2[s] -= xi2*fc*dy;
       fz2[s] -= xi2*fc*dz;
+
+      // compute the location of the impact along the member
+      xm = xi1*x1[s] + xi2*x2[s];
+      ym = xi1*y1[s] + xi2*y2[s];
+      zm = xi1*z1[s] + xi2*z2[s];
     }
 
     // return the contact force for the current interaction (helpful for tracking and counting discrete impact events)

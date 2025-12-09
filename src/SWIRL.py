@@ -31,6 +31,9 @@ API = CDLL(library_name)
 ND_POINTER_1 = np.ctypeslib.ndpointer(dtype=np.float64, 
                                       ndim=1,
                                       flags="C")
+NI_POINTER_1 = np.ctypeslib.ndpointer(dtype=np.int32, 
+                                      ndim=1,
+                                      flags="C")
 NI_POINTER_2 = np.ctypeslib.ndpointer(dtype=np.int32, 
                                       ndim=2,
                                       flags="C")
@@ -58,6 +61,8 @@ API.get_wind_field_data.argtypes = [c_size_t, ND_POINTER_1, ND_POINTER_1, ND_POI
 API.get_wind_field_data.restype  = None
 API.get_impact_event_metrics.argtypes = [POINTER(c_int), POINTER(c_double), POINTER(c_double)]
 API.get_impact_event_metrics.restype  = None
+API.get_impact_events.argtypes = [NI_POINTER_1, NI_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
+API.get_impact_events.restype  = None
 API.finalize.argtypes = None
 API.finalize.restype  = None
 
@@ -244,6 +249,66 @@ def impact_event_metrics():
     max_impulse = c_double(0.0)
     API.get_impact_event_metrics(byref(Nimpacts),byref(max_force),byref(max_impulse))
     return Nimpacts.value, max_force.value, max_impulse.value
+
+# ---------------------------------------------------------------------------- #
+
+# Output information for all discrete impact events
+def output_impact_events():
+    # Get the total number of impacts
+    Nimpacts, max_force, max_impulse = impact_event_metrics()
+
+    # Pre-allocate data arrays for impact events
+    particle_ID = np.zeros(Nimpacts,dtype=np.int32)
+    segment_ID  = np.zeros(Nimpacts,dtype=np.int32)
+    x           = np.zeros(Nimpacts)
+    y           = np.zeros(Nimpacts)
+    z           = np.zeros(Nimpacts)
+    start_time  = np.zeros(Nimpacts)
+    end_time    = np.zeros(Nimpacts)
+    impulse     = np.zeros(Nimpacts)
+    max_force   = np.zeros(Nimpacts)
+
+    # Get data for all impact events
+    API.get_impact_events(particle_ID,segment_ID,x,y,z,start_time,end_time,impulse,max_force)
+
+    # Create the Exodus file containing impact info:
+    if (Nimpacts > 0):
+
+        # create a new Exodus file
+        filename = "impact_events.exo"
+        try:
+            os.remove(filename)
+        except OSError:
+            pass
+        impact_exo = pyexodus.exodus(file=filename, mode='w', array_type='numpy', title='Impact event file - produced by SWIRL module', numDims=3, numNodes=Nimpacts, numElems=Nimpacts, numBlocks=1, numNodeSets=0, numSideSets=0, io_size=0, compression=None)
+
+        # put node coordinates (locations of impacts)
+        impact_exo.put_coords(xCoords=x,yCoords=y,zCoords=z)
+
+        # put element block info for all impacts
+        impact_exo.put_elem_blk_info(id=1, elemType='SPHERE', numElems=Nimpacts, numNodesPerElem=1, numAttrsPerElem=0)
+        impact_exo.put_elem_connectivity(id=1, connectivity=np.arange(Nimpacts), shift_indices=1, chunk_size_in_mb=128)
+
+        # set the number of output impact event variables and their names
+        impact_exo.set_node_variable_number(4)
+        #impact_exo.put_node_variable_name("particle_ID",    1)
+        #impact_exo.put_node_variable_name("segment_ID",     2)
+        impact_exo.put_node_variable_name("start_time", 1)
+        impact_exo.put_node_variable_name("end_time",   2)
+        impact_exo.put_node_variable_name("impulse",    3)
+        impact_exo.put_node_variable_name("max_force",  4)
+    
+        # create a new (single) output time state
+        impact_exo.put_time(1, 0.0)
+    
+        # write nodal variable values at the current time state
+        impact_exo.put_node_variable_values("start_time", 1, start_time)
+        impact_exo.put_node_variable_values("end_time",   1, end_time)
+        impact_exo.put_node_variable_values("impulse",    1, impulse)
+        impact_exo.put_node_variable_values("max_force",  1, max_force)
+
+        # Close the Exodus file
+        impact_exo.close()
 
 # ---------------------------------------------------------------------------- #
 
