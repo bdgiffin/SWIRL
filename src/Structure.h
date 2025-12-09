@@ -89,6 +89,7 @@ struct ImpactEvents {
       new_event.is_active      = true;
       active_events[key] = new_event;
     }
+    
   } // record_event()
 
   void archive_events(void) {
@@ -100,6 +101,11 @@ struct ImpactEvents {
       } else {
 	events.push_back(it->second); // archive inactive event
 	it = active_events.erase(it); // erase event, and get iterator for the next event
+	DEBUG(std::cout << "Impact between particle " << events.back().particle_ID << " and member " << events.back().segment_ID << std::endl;)
+	DEBUG(std::cout << "  coordinates: (" << events.back().coordinates[0] << ", " << events.back().coordinates[1] << ", " <<events.back().coordinates[2] << ")" << std::endl;)
+	DEBUG(std::cout << "  time: " << events.back().time << std::endl;)
+	DEBUG(std::cout << "  impulse: " << events.back().impulse << std::endl;)
+	DEBUG(std::cout << "  max_force: " << events.back().max_force << std::endl;)
       }
     }
   } // archive_events()
@@ -388,9 +394,6 @@ struct Structure {
       } else if (ghost) { // un-ghost particle if it is not close to the structure
 	ghost = false;
       }
-
-      // archive inactive impact events
-      impacts.archive_events();
 
     } // if (num_members > 0)
     

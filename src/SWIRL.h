@@ -166,6 +166,8 @@ private:
 					      ighost,i,time,dt);
 	debris.ghost[i] = ighost;
       }
+      // archive inactive impact events
+      members.impacts.archive_events();
     }
 
     // apply boundary forces to the Particles

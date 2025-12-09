@@ -84,7 +84,7 @@ moment_of_area_y     = 0.5*polar_moment_of_area
 # Call C/C++ library API functions from Python:
 
 # Define randomized spherical particle parameters
-n_particles = 2000
+n_particles = 200
 particle_density         =  0.5 # [kg/m^3] (roughly the density of wood)
 particle_min_diameter    = 0.01 # [m]
 particle_diameter_range  =  1.0 # [m]
@@ -220,12 +220,18 @@ analysis('Transient')            # define type of analysis: time-dependent
 
 # perform the analysis
 time = 0.0 # [s] starting time
-dt   = 0.001 # [s] time increment
+dt   = 0.01 # [s] time increment
 SWIRL.output_state(time)
-for step_id in range(1,1000):
+for step_id in range(1,100):
     time = time + dt
     analyze(1,dt) # apply 1 time step of size dt in the opensees analysis
     SWIRL.output_state(time)
+
+# Request and report impact event metrics that occurred during the analysis
+Nimpacts, max_force, max_impulse = SWIRL.impact_event_metrics()
+print("  # discrete impact events  = " + str(Nimpacts))
+print("max discrete impact force   = " + str(max_force))
+print("max discrete impact impulse = " + str(max_impulse))
 
 # finalize the SWIRL module (close the Exodus files)
 SWIRL.finalize()
