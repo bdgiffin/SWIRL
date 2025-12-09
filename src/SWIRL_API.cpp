@@ -1,11 +1,16 @@
 // ======================================================================== //
-// C API functions for interacting with the SWIRL library        //
+// C API functions for interacting with the SWIRL library                   //
 // ======================================================================== //
 
 #include "SWIRL.h"
 #include "Logger.h"
 #include <iostream>
 #include <stdio.h>
+#include <string>
+#include <unordered_map>
+
+// global parameter list
+std::unordered_map<std::string,double> params;
 
 // global instance of the particle dynamics object
 SWIRL SWIRL_instance;
@@ -14,6 +19,17 @@ SWIRL SWIRL_instance;
 
 // Define all C API functions within the following block:
 extern "C" {
+  
+  // ------------------------------------------------------------------------ //
+
+  // Define a named parameter and its corresponding value
+  //   name: the string-valued name of the prameter being defined
+  //  value: the real-valued parameter constant being defined
+  void define_parameter(const char* name, double value) {
+    params[name] = value;
+  } // define_parameter()
+  
+  // ------------------------------------------------------------------------ //
 
   // Define the parameterized wind field within the simulation
   //       type: the string-valued name of the chosen wind field model "type" to instantiate
@@ -68,7 +84,7 @@ extern "C" {
   // (Legacy) API method to update the simulation state to the indicated analysis time
   // time: indicated analysis time to which the analysis should be updated
   void update_state(double time) {
-    SWIRL_instance.update_state(time);
+    SWIRL_instance.update_state(time,params);
   } // update_state()
   
   // ------------------------------------------------------------------------ //
@@ -81,7 +97,7 @@ extern "C" {
 	 	               double *vx, double *vy, double *vz,
 		               double *fx, double *fy, double *fz) {
     // conditionally initialize the simulation state
-    if (!SWIRL_instance.initialized()) SWIRL_instance.initialize();
+    if (!SWIRL_instance.initialized()) SWIRL_instance.initialize(params);
     SWIRL_instance.debris.get_field_data(ux,uy,uz,vx,vy,vz,fx,fy,fz);
   } // get_particle_field_data()
   
@@ -91,7 +107,7 @@ extern "C" {
   // {x,y,z}: arrays of vector components of particle positions at the current time
   void get_particle_positions(double *x, double *y, double *z) {
     // conditionally initialize the simulation state
-    if (!SWIRL_instance.initialized()) SWIRL_instance.initialize();
+    if (!SWIRL_instance.initialized()) SWIRL_instance.initialize(params);
     SWIRL_instance.debris.get_positions(x,y,z);
   } // get_particle_positions()
   
@@ -104,15 +120,26 @@ extern "C" {
   //       rhof: array of fluid densities at sampling points
   void get_wind_field_data(size_t Npoints, double *x, double *y, double *z, double *vx, double *vy, double *vz, double *rhof) {
     // conditionally initialize the simulation state
-    if (!SWIRL_instance.initialized()) SWIRL_instance.initialize();
+    if (!SWIRL_instance.initialized()) SWIRL_instance.initialize(params);
     SWIRL_instance.wind_model->get_fluid_velocity_and_density(Npoints,SWIRL_instance.time,x,y,z,vx,vy,vz,rhof);
   } // get_particle_field_data()
+  
+  // ------------------------------------------------------------------------ //
+
+  // Retrieve metrics concerning discrete impact events
+  //    Nimpacts: total number of discrete impact events
+  //   max_force: maximum impact force (among all discrete impact events)
+  // max_impulse: maximum impact impulse (among all discrete impact events)
+  void get_impact_event_metrics(int* Nimpacts, double* max_force, double* max_impulse) {
+    SWIRL_instance.members.impacts.get_metrics(Nimpacts,max_force,max_impulse);
+  } // get_impact_event_metrics()
   
   // ------------------------------------------------------------------------ //
 
   // Finalize SWIRL instance to prepare for possible re-initialization
   void finalize(void) {
     SWIRL_instance = SWIRL();
+    params = std::unordered_map<std::string,double>();
   } // finalize()
   
 // ======================================================================== //
@@ -123,7 +150,7 @@ extern "C" {
     // check to see if this is the first time this function is being called
     if (!SWIRL_instance.initialized()) {
       // initialize the particle dynamics object and define randomized particle positions
-      SWIRL_instance.initialize();
+      SWIRL_instance.initialize(params);
     }
     
   } // OPS_InitializeLineLoad
@@ -152,7 +179,7 @@ extern "C" {
     // (output) forces[2*3]:      the forces applied to the nodes of the current element
 
     // conditionally update the simulation state to the indicated analysis time
-    SWIRL_instance.update_state(time);
+    SWIRL_instance.update_state(time,params);
 
     // get loads applied to the requested element whose tag is specified
     SWIRL_instance.members.get_applied_forces(element_tag,coordinates,forces);

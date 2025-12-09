@@ -1,7 +1,7 @@
 # Module for calling the C/C++ SWIRL API functions from Python
 
 # Python package for calling C/C++ functions from Python
-from ctypes import CDLL, POINTER
+from ctypes import CDLL, POINTER, byref
 from ctypes import c_size_t, c_double, c_int, c_char_p, c_bool
 
 # Package for reading/writing mesh files
@@ -36,6 +36,8 @@ NI_POINTER_2 = np.ctypeslib.ndpointer(dtype=np.int32,
                                       flags="C")
 
 # Define all C/C++ library API function signatures
+API.define_parameter.argtypes = [c_char_p, c_double]
+API.define_parameter.restype  = None
 API.define_wind_field.argtypes = [c_char_p, ND_POINTER_1]
 API.define_wind_field.restype  = None
 API.define_particles.argtypes = [c_size_t, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
@@ -54,6 +56,8 @@ API.get_particle_positions.argtypes = [ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
 API.get_particle_positions.restype  = None
 API.get_wind_field_data.argtypes = [c_size_t, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1, ND_POINTER_1]
 API.get_wind_field_data.restype  = None
+API.get_impact_event_metrics.argtypes = [POINTER(c_int), POINTER(c_double), POINTER(c_double)]
+API.get_impact_event_metrics.restype  = None
 API.finalize.argtypes = None
 API.finalize.restype  = None
 
@@ -230,6 +234,16 @@ def create_random_particles(n_particles,density,min_diameter,diameter_range,cyli
         # initialize the total number of time states
         global step_id
         step_id = 0
+
+# ---------------------------------------------------------------------------- #
+
+# Get impact event info: (Nimpacts, max_force, max_impulse)
+def impact_event_metrics():
+    Nimpacts    = c_int(0)
+    max_force   = c_double(0.0)
+    max_impulse = c_double(0.0)
+    API.get_impact_event_metrics(byref(Nimpacts),byref(max_force),byref(max_impulse))
+    return Nimpacts.value, max_force.value, max_impulse.value
 
 # ---------------------------------------------------------------------------- #
 

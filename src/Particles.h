@@ -6,6 +6,8 @@
 #include <vector>
 #include <cmath>
 #include <memory>
+#include <string>
+#include <unordered_map>
 
 // ======================================================================== //
 
@@ -88,14 +90,40 @@ struct Particles {
   // ---------------------------------------------------------------------- //
 
   // Initialize the Particles object (assuming all particles have been defined)
-  void initialize(std::unique_ptr<WindField>& wind_model, double initial_time = 0.0, double new_drag_coeff = 0.47, double new_contact_stiff = 1.0e+4, double new_contact_damp_ratio = 0.5) {
+  void initialize(std::unique_ptr<WindField>& wind_model, std::unordered_map<std::string,double>& params) {
     
     DEBUG(std::cout << "Initializing Particles object with " << num_particles << " particles defined" << std::endl;)
 
-    // Set constants common to all particles
-    drag_coeff         = new_drag_coeff;         // (default = 0.47 for an assumed spherical particle)
-    contact_stiff      = new_contact_stiff;      // [N/m] = [kg/s^2]
-    contact_damp_ratio = new_contact_damp_ratio; // (default = 0.5 for 50% of critical damping relative to the contact stiffness)
+    // Set constants common to all particles:
+
+    // Get the time at which the particles' velocities will be initialized:
+    double initial_time;
+    if (params.count("initial_time") > 0) {
+      initial_time = params["initial_time"];
+    } else {
+      initial_time = 0.0; // [s] (default = 0.0)
+    }
+
+    // Get drag coefficient for all particles:
+    if (params.count("particle_drag_coefficient") > 0) {
+      drag_coeff = params["particle_drag_coefficient"];
+    } else {
+      drag_coeff = 0.47; // (default = 0.47 for an assumed spherical particle)
+    }
+
+    // Get contact stiffness for all particles:
+    if (params.count("particle_contact_stiffness") > 0) {
+      contact_stiff = params["particle_contact_stiffness"];
+    } else {
+      contact_stiff = 1.0e+4; // [N/m] = [kg/s^2] (default = 1.0e+4)
+    }
+
+    // Get contact damping ratio for all particles:
+    if (params.count("particle_contact_damping_ratio") > 0) {
+      contact_damp_ratio = params["particle_contact_damping_ratio"];
+    } else {
+      contact_damp_ratio = 0.5; // (default = 0.5 for 50% of critical damping relative to the contact stiffness)
+    }
 
     // Initialize stored data for all particles
     ghost.resize(num_particles);

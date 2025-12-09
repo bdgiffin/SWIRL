@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 
 
 // ======================================================================== //
@@ -55,7 +56,7 @@ struct SWIRL {
   // ---------------------------------------------------------------------- //
 
   // Initialize the particle dynamics simulation
-  void initialize() {
+  void initialize(std::unordered_map<std::string,double>& params) {
 
     DEBUG(std::cout << "Initializing SWIRL object" << std::endl;)
 
@@ -71,10 +72,10 @@ struct SWIRL {
     wind_model->initialize();
 
     // Initialize the debris Particles
-    debris.initialize(wind_model);
+    debris.initialize(wind_model,params);
 
     // Initialize the members in the Structure
-    members.initialize();
+    members.initialize(params);
 
     // Set the "is_initialized" flag
     is_initialized = true;
@@ -84,10 +85,10 @@ struct SWIRL {
   // ---------------------------------------------------------------------- //
   
   // Update the simulation state to the indicated analysis time
-  void update_state(double time_in) {
+  void update_state(double time_in, std::unordered_map<std::string,double>& params) {
 
     // conditionally initialize the simulation state
-    if (!is_initialized) initialize();
+    if (!is_initialized) initialize(params);
 
     // conditionally update the simulation state to the new analysis time
     if (time_in > time) {
@@ -161,7 +162,8 @@ private:
 	members.find_and_apply_contact_forces(debris.contact_stiff,debris.contact_damp[i],debris.radius[i],
 					      debris.x[i],debris.y[i],debris.z[i],
 					      debris.vx[i],debris.vy[i],debris.vz[i],
-					      debris.fx[i],debris.fy[i],debris.fz[i],ighost);
+					      debris.fx[i],debris.fy[i],debris.fz[i],
+					      ighost,i,time,dt);
 	debris.ghost[i] = ighost;
       }
     }

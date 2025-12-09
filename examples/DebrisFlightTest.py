@@ -74,6 +74,11 @@ vertical_coordinate_stddev  = 0.5*average_vertical_coordinate # [m] The standard
 #SWIRL.create_random_particles(num_particles,particle_density,particle_min_diameter,particle_diameter_range,particle_cylinder_radius,particle_cylinder_height,particle_cylinder_center,random_seed)
 SWIRL.create_constrained_random_particles(num_particles,particle_density,particle_min_diameter,particle_diameter_range,particle_cylinder_radius,particle_cylinder_height,particle_cylinder_center,random_seed,particle_cylinder_inner_radius,average_radial_coordinate,radial_coordinate_stddev,average_vertical_coordinate,vertical_coordinate_stddev,exclusion_cylinder_center,exclusion_cylinder_radius,exclusion_cylinder_height)
 
+# Define (optional) parameters related to particle drag and contact forces
+SWIRL.API.define_parameter(b"particle_drag_coefficient",      0.47)   # (default = 0.47 for an assumed spherical particle)
+SWIRL.API.define_parameter(b"particle_contact_stiffness",     1.0e+4) # [N/m] = [kg/s^2] (default = 1.0e+4)
+SWIRL.API.define_parameter(b"particle_contact_damping_ratio", 0.5)    # (default = 0.5 for 50% of critical damping relative to the contact stiffness)
+
 # Create the parameterized wind field model (Baker Sterling Vortex)
 wind_field_params = np.zeros(12)
 wind_field_params[0]  = 100.0    # [m/s]      Um: reference radial velocity
@@ -139,6 +144,12 @@ for step_id in range(1,100):
     SWIRL.API.update_state(time)
     SWIRL.output_state(time)
 
+# Request and report impact event metrics that occurred during the analysis
+Nimpacts, max_force, max_impulse = SWIRL.impact_event_metrics()
+print("  # discrete impact events  = " + str(Nimpacts))
+print("max discrete impact force   = " + str(max_force))
+print("max discrete impact impulse = " + str(max_impulse))
+    
 # Report wall time for performance measurement
 end_time = perftime.perf_counter()
 elapsed_time = end_time - start_time

@@ -9,6 +9,10 @@
 #include <set>
 #include <cmath>
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <map>
+#include <utility>
 
 
 // ======================================================================== //
@@ -34,6 +38,86 @@ struct IndexMap {
   std::vector<int> shifted_keys_to_indices;
   
 }; // IndexMap
+
+
+// ======================================================================== //
+
+
+// Object to keep track of a single discrete impact event
+struct ImpactEvent {
+
+  //ImpactEvent(void) {} // Empty default constructor method
+  
+  int    particle_ID;
+  int    segment_ID;
+  double coordinates[3];
+  double time;
+  double impulse   = 0.0;
+  double max_force = 0.0;
+  bool   is_active;
+  
+}; // ImpactEvent
+
+
+// ======================================================================== //
+
+
+// Object to keep track of discrete impact events
+struct ImpactEvents {
+
+  //ImpactEvents(void) {} // Empty default constructor method
+
+  void record_event(int particle_ID, int segment_ID, double x, double y, double z, double t, double fc, double dt) {
+    std::pair<int,int> key(particle_ID,segment_ID);
+    if (active_events.count(key) > 0) {
+      // update an existing (active) event
+      ImpactEvent& existing_event = active_events[key];
+      existing_event.impulse += fc*dt;
+      if (fc > existing_event.max_force) existing_event.max_force = fc;
+      existing_event.is_active = true;
+    } else {
+      // create new (active) event
+      ImpactEvent new_event;
+      new_event.particle_ID    = particle_ID;
+      new_event.segment_ID     = segment_ID;
+      new_event.coordinates[0] = x;
+      new_event.coordinates[1] = y;
+      new_event.coordinates[2] = z;
+      new_event.time           = t;
+      new_event.impulse        = fc*dt;
+      new_event.max_force      = fc;
+      new_event.is_active      = true;
+      active_events[key] = new_event;
+    }
+  } // record_event()
+
+  void archive_events(void) {
+    // loop over all active events
+    for (auto it = active_events.begin(); it != active_events.end();) {
+      if (it->second.is_active) {
+        it->second.is_active = false; // reset event active status, but keep event active
+	++it; // get the next event (increment the iterator)
+      } else {
+	events.push_back(it->second); // archive inactive event
+	it = active_events.erase(it); // erase event, and get iterator for the next event
+      }
+    }
+  } // archive_events()
+
+  void get_metrics(int* Nimpacts, double* max_force, double* max_impulse) {
+    *Nimpacts = events.size();
+    *max_force = 0.0;
+    *max_impulse = 0.0;
+    for (auto& event : events) {
+      if (event.max_force > *max_force) *max_force = event.max_force;
+      if (event.impulse > *max_impulse) *max_impulse = event.impulse;
+    }
+  }
+
+  std::map<std::pair<int,int>, ImpactEvent> active_events;
+  std::vector<ImpactEvent> events;
+  
+}; // ImpactEvents
 
 
 // ======================================================================== //
@@ -91,7 +175,7 @@ struct Structure {
   // ---------------------------------------------------------------------- //
 
   // Initialize the Structure object (assuming all members have been defined)
-  void initialize(void) {
+  void initialize(std::unordered_map<std::string,double>& params) {
     
     if (num_members > 0) {
       
@@ -266,7 +350,8 @@ struct Structure {
   void find_and_apply_contact_forces(double contact_stiff, double contact_damp, double rp,
 				     double xp, double yp, double zp,
 				     double vxp, double vyp, double vzp,
-			             double& fxp, double& fyp, double& fzp, bool& ghost) {
+			             double& fxp, double& fyp, double& fzp,
+				     bool& ghost, int particle_ID, double time, double dt) {
 
     if (num_members > 0) {
     
@@ -294,12 +379,18 @@ struct Structure {
 	  // apply contact forces between the current particle and the found (unique) segments
 	  for (int s : segment_ids) {
 	    DEBUG(std::cout << "Contact occured with segment " << s << std::endl;)
-	      apply_contact_force(s,contact_stiff,contact_damp,rp,xp,yp,zp,vxp,vyp,vzp,fxp,fyp,fzp);
+	    double fc = apply_contact_force(s,contact_stiff,contact_damp,rp,xp,yp,zp,vxp,vyp,vzp,fxp,fyp,fzp);
+	    if (fc != 0.0) { // record/update discrete impact event
+	      impacts.record_event(particle_ID,s,xp,yp,zp,time,fc,dt);
+	    }
 	  }
 	}
       } else if (ghost) { // un-ghost particle if it is not close to the structure
 	ghost = false;
       }
+
+      // archive inactive impact events
+      impacts.archive_events();
 
     } // if (num_members > 0)
     
@@ -308,8 +399,8 @@ struct Structure {
   // ---------------------------------------------------------------------- //
   
   // compute contact interaction force between a single member "s" and a particle "p"
-  void apply_contact_force(int s, double contact_stiff, double contact_damp, double rp, double xp, double yp, double zp,
-			   double vxp, double vyp, double vzp, double& fxp, double& fyp, double& fzp) {
+  double apply_contact_force(int s, double contact_stiff, double contact_damp, double rp, double xp, double yp, double zp,
+	  		     double vxp, double vyp, double vzp, double& fxp, double& fyp, double& fzp) {
     
     // get the shifted coordinates of the joints of the current member
     // measured relative to the current particle's position
@@ -360,9 +451,15 @@ struct Structure {
     double dgap_dt = - (dx*vxp + dy*vyp + dz*vzp)/dl;
     
     // apply contact force if the gap is negative (the members are in contact)
+    double fc = 0.0;
     if (gap < 0.0) {
+      // normalize the direction of the contact force
+      dx /= dl;
+      dy /= dl;
+      dz /= dl;
+      
       // compute the contact force acting on the particle
-      double fc = (contact_stiff*gap + contact_damp*dgap_dt)/dl;
+      fc = contact_stiff*gap + contact_damp*dgap_dt;
       fxp += fc*dx;
       fyp += fc*dy;
       fzp += fc*dz;
@@ -375,6 +472,9 @@ struct Structure {
       fy2[s] -= xi2*fc*dy;
       fz2[s] -= xi2*fc*dz;
     }
+
+    // return the contact force for the current interaction (helpful for tracking and counting discrete impact events)
+    return fc;
     
   } // apply_contact_force()
 
@@ -459,9 +559,10 @@ struct Structure {
   // --------------------- Declare public data members -------------------- //
 
   // Common constants defined for all members
-  int         num_members;  // The total number of members
-  SpatialHash members_hash; // Spatial hash to help search for the candidate members that may be in contact with a given particle
-  IndexMap    tag_to_index; // Mapping from (global) element tag to (local) member index
+  int          num_members;  // The total number of members
+  SpatialHash  members_hash; // Spatial hash to help search for the candidate members that may be in contact with a given particle
+  IndexMap     tag_to_index; // Mapping from (global) element tag to (local) member index
+  ImpactEvents impacts;      // Record of discrete impact events
 
   // Data defined separately for each member
   std::vector<int>    element_tag;   // The element tags associated with all members
