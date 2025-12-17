@@ -6,3 +6,4 @@ install
 *.pvd
 *_PVD
 examples/particles.exo
+examples/impact_events.exo

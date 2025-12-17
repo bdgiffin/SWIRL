@@ -74,8 +74,8 @@ struct ImpactEvents {
       // update an existing (active) event
       ImpactEvent& existing_event = active_events[key];
       existing_event.end_time = t;
-      existing_event.impulse += fc*dt;
-      if (fc > existing_event.max_force) existing_event.max_force = fc;
+      existing_event.impulse += std::abs(fc)*dt;
+      if (std::abs(fc) > existing_event.max_force) existing_event.max_force = std::abs(fc);
       existing_event.is_active = true;
     } else {
       // create new (active) event
@@ -87,8 +87,8 @@ struct ImpactEvents {
       new_event.coordinates[2] = z;
       new_event.start_time     = t;
       new_event.end_time       = t;
-      new_event.impulse        = fc*dt;
-      new_event.max_force      = fc;
+      new_event.impulse        = std::abs(fc)*dt;
+      new_event.max_force      = std::abs(fc);
       new_event.is_active      = true;
       active_events[key] = new_event;
     }

@@ -290,18 +290,20 @@ def output_impact_events():
         impact_exo.put_elem_connectivity(id=1, connectivity=np.arange(Nimpacts), shift_indices=1, chunk_size_in_mb=128)
 
         # set the number of output impact event variables and their names
-        impact_exo.set_node_variable_number(4)
-        #impact_exo.put_node_variable_name("particle_ID",    1)
-        #impact_exo.put_node_variable_name("segment_ID",     2)
-        impact_exo.put_node_variable_name("start_time", 1)
-        impact_exo.put_node_variable_name("end_time",   2)
-        impact_exo.put_node_variable_name("impulse",    3)
-        impact_exo.put_node_variable_name("max_force",  4)
+        impact_exo.set_node_variable_number(6)
+        impact_exo.put_node_variable_name("particle_ID",1)
+        impact_exo.put_node_variable_name("segment_ID", 2)
+        impact_exo.put_node_variable_name("start_time", 3)
+        impact_exo.put_node_variable_name("end_time",   4)
+        impact_exo.put_node_variable_name("impulse",    5)
+        impact_exo.put_node_variable_name("max_force",  6)
     
         # create a new (single) output time state
         impact_exo.put_time(1, 0.0)
     
         # write nodal variable values at the current time state
+        impact_exo.put_node_variable_values("particle_ID",1, particle_ID.astype(np.float64))
+        impact_exo.put_node_variable_values("segment_ID", 1, segment_ID.astype(np.float64))
         impact_exo.put_node_variable_values("start_time", 1, start_time)
         impact_exo.put_node_variable_values("end_time",   1, end_time)
         impact_exo.put_node_variable_values("impulse",    1, impulse)
