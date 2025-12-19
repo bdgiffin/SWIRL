@@ -70,24 +70,25 @@ API.finalize.restype  = None
 
 # Generate a log-normally distributed collection of particles with variable diameters and positions within a constrained range,
 # and initialize the SWIRL object with these particles prior to initialization
-def create_constrained_random_particles(n_particles,density,min_diameter,diameter_range,cylinder_radius,cylinder_height,cylinder_center,random_seed,inner_cylinder_radius,average_radial_coordinate,radial_coordinate_stddev,average_vertical_coordinate,vertical_coordinate_stddev,exclusion_cylinder_center,exclusion_cylinder_radius,exclusion_cylinder_height):
-    # n_particles     [int]    The total number of spherical debris particles to be defined
-    # density         [kg/m^3] The constant mass density assigned to all particles
-    # min_diameter    [m]      The minimum particle diameter
-    # diameter_range  [m]      The range of random particle diameters
-    # cylinder_radius [m]      The radius of the cylinder in which particles will be randomly distributed
-    # cylinder_height [m]      The height of the cylinder in which particles will be randomly distributed
-    # cylinder_center [m,m,m]  The x,y,z coordinate center of cylinder at the time of initialization
-    # random_seed     [int]    The random number generator seed value, to ensure reproducibility
-    # Extra variables:
-    # inner_cylinder_radius       [m] The radius of the inner cylinder (particles will NOT be initialized within the inner cylinder)
-    # average_radial_coordinate   [m] The mean radial coordinate at which particles are likely to be positioned
-    # radial_coordinate_stddev    [m] The standard deviation characterizing the lognormal distribution of particles' initial radial coordinates
-    # average_vertical_coordinate [m] The mean vertical coordinate at which particles are likely to be positioned
-    # vertical_coordinate_stddev  [m] The standard deviation characterizing the lognormal distribution of particles' initial vertical coordinates
-    # exclusion_cylinder_center   [m,m,m] The The x,y,z coordinate center of cylinder inside of which no particles should be initialized
-    # exclusion_cylinder_radius   [m] The radius of the cylinder in which no particles should be initialized
-    # exclusion_cylinder_height   [m] The height of the cylinder in which no particles should be initialized
+def create_constrained_random_particles(n_particles,density,min_diameter,diameter_range,cylinder_radius,cylinder_height,cylinder_center,random_seed,inner_cylinder_radius,average_radial_coordinate,radial_coordinate_stddev,average_vertical_coordinate,vertical_coordinate_stddev,exclusion_cylinder_center,exclusion_cylinder_radius,exclusion_cylinder_height,output_particles=True):
+    # n_particles                 [int]        The total number of spherical debris particles to be defined
+    # density                     [kg/m^3]     The constant mass density assigned to all particles
+    # min_diameter                [m]          The minimum particle diameter
+    # diameter_range              [m]          The range of random particle diameters
+    # cylinder_radius             [m]          The radius of the cylinder in which particles will be randomly distributed
+    # cylinder_height             [m]          The height of the cylinder in which particles will be randomly distributed
+    # cylinder_center             [m,m,m]      The x,y,z coordinate center of cylinder at the time of initialization
+    # random_seed                 [int]        The random number generator seed value, to ensure reproducibility
+    # Extra variables:                         
+    # inner_cylinder_radius       [m]          The radius of the inner cylinder (particles will NOT be initialized within the inner cylinder)
+    # average_radial_coordinate   [m]          The mean radial coordinate at which particles are likely to be positioned
+    # radial_coordinate_stddev    [m]          The standard deviation characterizing the lognormal distribution of particles' initial radial coordinates
+    # average_vertical_coordinate [m]          The mean vertical coordinate at which particles are likely to be positioned
+    # vertical_coordinate_stddev  [m]          The standard deviation characterizing the lognormal distribution of particles' initial vertical coordinates
+    # exclusion_cylinder_center   [m,m,m]      The The x,y,z coordinate center of cylinder inside of which no particles should be initialized
+    # exclusion_cylinder_radius   [m]          The radius of the cylinder in which no particles should be initialized
+    # exclusion_cylinder_height   [m]          The height of the cylinder in which no particles should be initialized
+    # output_particles            [True/False] Logical flag indicating whether to write out particle time history data to the particles.exo file
 
     global num_particles
     num_particles = n_particles
@@ -131,34 +132,41 @@ def create_constrained_random_particles(n_particles,density,min_diameter,diamete
     # Create the Exodus file containing particle info:
     if (num_particles > 0):
 
-        # create a new Exodus file
-        filename = "particles.exo"
-        try:
-            os.remove(filename)
-        except OSError:
-            pass
-        global exo
-        exo = pyexodus.exodus(file=filename, mode='w', array_type='numpy', title='Debris particle trajectory time-history file - produced by SWIRL module', numDims=3, numNodes=num_particles, numElems=num_particles, numBlocks=1, numNodeSets=0, numSideSets=0, io_size=0, compression=None)
+        if (output_particles):
 
-        # put node coordinates
-        exo.put_coords(xCoords=position_x,yCoords=position_y,zCoords=position_z)
+            # create a new Exodus file
+            filename = "particles.exo"
+            try:
+                os.remove(filename)
+            except OSError:
+                pass
+            global exo
+            exo = pyexodus.exodus(file=filename, mode='w', array_type='numpy', title='Debris particle trajectory time-history file - produced by SWIRL module', numDims=3, numNodes=num_particles, numElems=num_particles, numBlocks=1, numNodeSets=0, numSideSets=0, io_size=0, compression=None)
 
-        # put element block info for all particles
-        exo.put_elem_blk_info(id=1, elemType='SPHERE', numElems=num_particles, numNodesPerElem=1, numAttrsPerElem=0)
-        exo.put_elem_connectivity(id=1, connectivity=np.arange(num_particles), shift_indices=1, chunk_size_in_mb=128)
+            # put node coordinates
+            exo.put_coords(xCoords=position_x,yCoords=position_y,zCoords=position_z)
 
-        # set the number of output node (particle) variables and their names
-        num_node_variables = 3 + 3 + 3
-        exo.set_node_variable_number(num_node_variables)
-        exo.put_node_variable_name("displacement_x", 1)
-        exo.put_node_variable_name("displacement_y", 2)
-        exo.put_node_variable_name("displacement_z", 3)
-        exo.put_node_variable_name("velocity_x",     4)
-        exo.put_node_variable_name("velocity_y",     5)
-        exo.put_node_variable_name("velocity_z",     6)
-        exo.put_node_variable_name("force_x",        7)
-        exo.put_node_variable_name("force_y",        8)
-        exo.put_node_variable_name("force_z",        9)
+            # put element block info for all particles
+            exo.put_elem_blk_info(id=1, elemType='SPHERE', numElems=num_particles, numNodesPerElem=1, numAttrsPerElem=0)
+            exo.put_elem_connectivity(id=1, connectivity=np.arange(num_particles), shift_indices=1, chunk_size_in_mb=128)
+
+            # set the number of output node (particle) variables and their names
+            num_node_variables = 3 + 3 + 3
+            exo.set_node_variable_number(num_node_variables)
+            exo.put_node_variable_name("displacement_x", 1)
+            exo.put_node_variable_name("displacement_y", 2)
+            exo.put_node_variable_name("displacement_z", 3)
+            exo.put_node_variable_name("velocity_x",     4)
+            exo.put_node_variable_name("velocity_y",     5)
+            exo.put_node_variable_name("velocity_z",     6)
+            exo.put_node_variable_name("force_x",        7)
+            exo.put_node_variable_name("force_y",        8)
+            exo.put_node_variable_name("force_z",        9)
+
+        else:
+            
+            global exo
+            exo = None
 
         # initialize the total number of time states
         global step_id
@@ -168,15 +176,16 @@ def create_constrained_random_particles(n_particles,density,min_diameter,diamete
 
 # Generate a randomized collection of particles with variable diameters and positions,
 # and initialize the SWIRL object with these particles prior to initialization
-def create_random_particles(n_particles,density,min_diameter,diameter_range,cylinder_radius,cylinder_height,cylinder_center,random_seed):
-    # n_particles     [int]    The total number of spherical debris particles to be defined
-    # density         [kg/m^3] The constant mass density assigned to all particles
-    # min_diameter    [m]      The minimum particle diameter
-    # diameter_range  [m]      The range of random particle diameters
-    # cylinder_radius [m]      The radius of the cylinder in which particles will be randomly distributed
-    # cylinder_height [m]      The height of the cylinder in which particles will be randomly distributed
-    # cylinder_center [m,m,m]  The x,y,z coordinate center of cylinder at the time of initialization
-    # random_seed     [int]    The random number generator seed value, to ensure reproducibility
+def create_random_particles(n_particles,density,min_diameter,diameter_range,cylinder_radius,cylinder_height,cylinder_center,random_seed,output_particles=True):
+    # n_particles      [int]        The total number of spherical debris particles to be defined
+    # density          [kg/m^3]     The constant mass density assigned to all particles
+    # min_diameter     [m]          The minimum particle diameter
+    # diameter_range   [m]          The range of random particle diameters
+    # cylinder_radius  [m]          The radius of the cylinder in which particles will be randomly distributed
+    # cylinder_height  [m]          The height of the cylinder in which particles will be randomly distributed
+    # cylinder_center  [m,m,m]      The x,y,z coordinate center of cylinder at the time of initialization
+    # random_seed      [int]        The random number generator seed value, to ensure reproducibility
+    # output_particles [True/False] Logical flag indicating whether to write out particle time history data to the particles.exo file
 
     global num_particles
     num_particles = n_particles
@@ -207,34 +216,41 @@ def create_random_particles(n_particles,density,min_diameter,diameter_range,cyli
     # Create the Exodus file containing particle info:
     if (num_particles > 0):
 
-        # create a new Exodus file
-        filename = "particles.exo"
-        try:
-            os.remove(filename)
-        except OSError:
-            pass
-        global exo
-        exo = pyexodus.exodus(file=filename, mode='w', array_type='numpy', title='Debris particle trajectory time-history file - produced by SWIRL module', numDims=3, numNodes=num_particles, numElems=num_particles, numBlocks=1, numNodeSets=0, numSideSets=0, io_size=0, compression=None)
+        if (output_particles):
 
-        # put node coordinates
-        exo.put_coords(xCoords=position_x,yCoords=position_y,zCoords=position_z)
+            # create a new Exodus file
+            filename = "particles.exo"
+            try:
+                os.remove(filename)
+            except OSError:
+                pass
+            global exo
+            exo = pyexodus.exodus(file=filename, mode='w', array_type='numpy', title='Debris particle trajectory time-history file - produced by SWIRL module', numDims=3, numNodes=num_particles, numElems=num_particles, numBlocks=1, numNodeSets=0, numSideSets=0, io_size=0, compression=None)
 
-        # put element block info for all particles
-        exo.put_elem_blk_info(id=1, elemType='SPHERE', numElems=num_particles, numNodesPerElem=1, numAttrsPerElem=0)
-        exo.put_elem_connectivity(id=1, connectivity=np.arange(num_particles), shift_indices=1, chunk_size_in_mb=128)
+            # put node coordinates
+            exo.put_coords(xCoords=position_x,yCoords=position_y,zCoords=position_z)
 
-        # set the number of output node (particle) variables and their names
-        num_node_variables = 3 + 3 + 3
-        exo.set_node_variable_number(num_node_variables)
-        exo.put_node_variable_name("displacement_x", 1)
-        exo.put_node_variable_name("displacement_y", 2)
-        exo.put_node_variable_name("displacement_z", 3)
-        exo.put_node_variable_name("velocity_x",     4)
-        exo.put_node_variable_name("velocity_y",     5)
-        exo.put_node_variable_name("velocity_z",     6)
-        exo.put_node_variable_name("force_x",        7)
-        exo.put_node_variable_name("force_y",        8)
-        exo.put_node_variable_name("force_z",        9)
+            # put element block info for all particles
+            exo.put_elem_blk_info(id=1, elemType='SPHERE', numElems=num_particles, numNodesPerElem=1, numAttrsPerElem=0)
+            exo.put_elem_connectivity(id=1, connectivity=np.arange(num_particles), shift_indices=1, chunk_size_in_mb=128)
+
+            # set the number of output node (particle) variables and their names
+            num_node_variables = 3 + 3 + 3
+            exo.set_node_variable_number(num_node_variables)
+            exo.put_node_variable_name("displacement_x", 1)
+            exo.put_node_variable_name("displacement_y", 2)
+            exo.put_node_variable_name("displacement_z", 3)
+            exo.put_node_variable_name("velocity_x",     4)
+            exo.put_node_variable_name("velocity_y",     5)
+            exo.put_node_variable_name("velocity_z",     6)
+            exo.put_node_variable_name("force_x",        7)
+            exo.put_node_variable_name("force_y",        8)
+            exo.put_node_variable_name("force_z",        9)
+
+        else:
+            
+            global exo
+            exo = None
 
         # initialize the total number of time states
         global step_id
@@ -337,20 +353,22 @@ def output_state(time):
 
         # retrieve the simulation state info at the current time
         API.get_particle_field_data(ux,uy,uz,vx,vy,vz,fx,fy,fz)
+
+        if (exo is not None):
     
-        # create a new output time state
-        exo.put_time(step_id, time)
-    
-        # write nodal variable values at the current time state
-        exo.put_node_variable_values("displacement_x", step_id, ux)
-        exo.put_node_variable_values("displacement_y", step_id, uy)
-        exo.put_node_variable_values("displacement_z", step_id, uz)
-        exo.put_node_variable_values("velocity_x",     step_id, vx)
-        exo.put_node_variable_values("velocity_y",     step_id, vy)
-        exo.put_node_variable_values("velocity_z",     step_id, vz)
-        exo.put_node_variable_values("force_x",        step_id, fx)
-        exo.put_node_variable_values("force_y",        step_id, fy)
-        exo.put_node_variable_values("force_z",        step_id, fz)
+            # create a new output time state
+            exo.put_time(step_id, time)
+
+            # write nodal variable values at the current time state
+            exo.put_node_variable_values("displacement_x", step_id, ux)
+            exo.put_node_variable_values("displacement_y", step_id, uy)
+            exo.put_node_variable_values("displacement_z", step_id, uz)
+            exo.put_node_variable_values("velocity_x",     step_id, vx)
+            exo.put_node_variable_values("velocity_y",     step_id, vy)
+            exo.put_node_variable_values("velocity_z",     step_id, vz)
+            exo.put_node_variable_values("force_x",        step_id, fx)
+            exo.put_node_variable_values("force_y",        step_id, fy)
+            exo.put_node_variable_values("force_z",        step_id, fz)
 
 # ---------------------------------------------------------------------------- #
 
@@ -359,7 +377,8 @@ def finalize():
 
     # Close the Exodus file
     if (num_particles > 0):
-        exo.close()
+        if (exo is not None):
+            exo.close()
 
 # ---------------------------------------------------------------------------- #
 
